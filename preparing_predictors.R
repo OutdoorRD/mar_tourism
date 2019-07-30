@@ -9,9 +9,10 @@ library(raster)
 setwd("~/Documents/MAR/GIS/")
 
 # Import gridded AOI
-aoi <- st_read("AOI/AOI_v2/5km/twitter/aoi_5km_wgs84_pid.shp")
+## TODO: Need to change this to one that has pid 
+aoi <- st_read("AOI/AOI_v3/T_aoi_v3_wgs_5k_pid.shp")
 #plot(aoi)
-aoi_valid <- st_make_valid(aoi)
+#aoi_valid <- st_make_valid(aoi)
 
 ## Starting with habitat layers from coastal vulnerability
 
@@ -22,11 +23,11 @@ coral_valid <- st_make_valid(coral)
 
 # create an indicator for whether or not corals occur in each grid cell
 # check the projection
-st_crs(aoi_valid)
+st_crs(aoi)
 st_crs(coral_valid)
 
 # reproject aoi to match coral (and hopefully other CV layers)
-aoi_nad83 <- st_transform(aoi_valid, crs = st_crs(coral_valid))
+aoi_nad83 <- st_transform(aoi, crs = st_crs(coral_valid))
 
 # take intersection of grid and corals
 corals_int <- st_intersection(aoi_nad83, coral_valid)
