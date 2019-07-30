@@ -1,9 +1,5 @@
-# Combine PUD and TUD at the 5km scale
-# note that will need to pull in PUD from pud_results.shp for now, since
-# I just pulled those through invest (though may want to repull them through
-# globalrec if I decide I want raw counts or anything other than average annuals)
-# Or actually those data are in the monthly_table.csv, but still only through
-# 2017
+
+## Gridded and transforming the AOI for MAR
 
 library(sf)
 
