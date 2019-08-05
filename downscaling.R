@@ -6,8 +6,8 @@ library(tidyverse)
 setwd("~/Documents/MAR/Downscaling/")
 
 # bringing in PUD data to come up with proportions by country
-avgann <- read_csv("pud/userdays_avg_annual_bypid.csv")
-aoi <- "../GIS/Downscaling/CountriesplusTAOI_pid.shp"
+avgann <- read_csv("AOI_v3/pud/userdays_avg_annual_bypid.csv")
+aoi <- "AOI_v3/CountriesplusTAOI_v3_pid.shp"
 
 shp <- shapefile(aoi)
 data <- merge(shp@data, avgann, by='pid')
@@ -16,8 +16,8 @@ data <- merge(shp@data, avgann, by='pid')
 props <- data %>% 
   group_by(CNTRY_NAME) %>%
   mutate(country_pud = sum(avg_ann_ud)) %>%
-  select(CNTRY_NAME, id, avg_ann_ud, country_pud) %>%
-  filter(id == "1") %>%
+  select(CNTRY_NAME, id_2, avg_ann_ud, country_pud) %>%
+  filter(id_2 == "1") %>%
   mutate(prop_viz = avg_ann_ud/country_pud)
 
 props
@@ -54,4 +54,4 @@ proportioned_viz <- cruiseOvernight %>% filter(Year == 2017) %>%
 proportioned_viz
 
 # let's write it out
-#write_csv(proportioned_viz, "../Data/proportioned_viz_2017.csv")
+#write_csv(proportioned_viz, "../Data/proportioned_viz_2017_AOIv3.csv")
