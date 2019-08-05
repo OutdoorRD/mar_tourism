@@ -80,38 +80,59 @@ mpa_smud <- mpa_grid_sm %>%
   summarise(smud_prop = sum(smud_in_mpa),
             smud_tot = sum(avg_ann_smud),
             pud_tot = sum(avg_ann_pud),
-            tud_tot = sum(avg_ann_tud)) %>%
+            pud_prop = sum(pud_in_mpa),
+            tud_tot = sum(avg_ann_tud),
+            tud_prop = sum(tud_in_mpa)) %>%
   ungroup()
 
 # let's have a look and see if these seems reasonable
 mpa_smud_tp <- st_set_geometry(mpa_smud, NULL)
 ggplot(mpa_smud_tp)+
-  geom_col(aes(x = reorder(NAME, smud_tot), y = smud_prop)) +
+  geom_col(aes(x = reorder(NAME, smud_prop), y = smud_prop)) +
   coord_flip()
 
 # how about PUD on its own?
 ggplot(mpa_smud_tp)+
-  geom_col(aes(x = reorder(NAME, smud_tot), y = pud_tot)) +
+  geom_col(aes(x = reorder(NAME, smud_prop), y = pud_prop)) +
   coord_flip()
 
 # and TUD?
 ggplot(mpa_smud_tp)+
-  geom_col(aes(x = reorder(NAME, smud_tot), y = tud_tot)) +
+  geom_col(aes(x = reorder(NAME, smud_prop), y = tud_prop)) +
   coord_flip()
 
-
+# plotting together
 mpa_smud_tall <- mpa_smud %>% 
   st_set_geometry(NULL) %>%
   gather(key = "source", value = "UD", -NAME, -Country)
 
-ggplot(mpa_smud_tall %>% filter(source != "smud_prop")) +
-  geom_col(aes(x = NAME, y = UD, fill = source), position = "dodge") +
+ggplot(mpa_smud_tall %>% filter(source %in% c("tud_prop", "pud_prop"))) +
+  geom_col(aes(x = reorder(NAME, UD), y = UD, fill = source)) +
   coord_flip() 
 
-# can I show proportion of UD that goes to each MPA based on each source?
-mpa_smud_tall %>%
-  mutate()
 
+
+###############################
+##### Let's check out whether proportions or total UD is better correlated with PUD pulled from the MPA shapefile ####
+pud_avg_ann_shp <- read_csv("~/Documents/MAR/ModelRuns/baseline_mpas/pud/avg_ann_pud_pid.csv")
+
+PUD_comps <- pud_avg_ann_shp %>%
+  rename(PUD_shape = avg_ann_ud) %>%
+  left_join(mpa_smud)
+
+ggplot(PUD_comps, aes(x = PUD_shape)) +
+  #geom_point(aes(y = pud_tot)) +
+  geom_point(aes(y = pud_prop), col = "green") +
+  geom_abline(slope = 1)
+
+# PUD_prop looks much better. Generally good, but there's one point that seems pretty off
+PUD_comps %>% arrange(desc(pud_prop))
+# Caye Caulker has more viz when calculated as a proportion of grid cells than when calculated using the MPA
+# shapefile. I think this is becasue the Caye Caulker MPA doesn't actually include the popular Caye landmass
+
+## Great. Proportions seems pretty good
+
+##################################################################
 # great. So now... how to get from smud to number of visitors and expenditures?
 
 # Let's figure out how many SMUD I have across the entire MAR
@@ -121,13 +142,16 @@ total_sm <- avg_ann_smud %>%
 # and... figure out the total visitor to avg_ann_smud ratio
 (viz_to_smud <- mar_summary$Visitors/total_sm$avg_ann_smud)
 # ok. each avg_ann_smud is equivalent to ~25 visitors
+(viz_to_pud <- mar_summary$Visitors/total_sm$avg_ann_pud)
+# and each avg_ann_pud is ~1000 visitors
 
 ## so... let's calculate visitors and expenditures by mpa
 mpa_smud
 mpa_summaries <- mpa_smud %>% 
   left_join(avg_exp, by = "Country") %>%
-  mutate(visitors = smud*viz_to_smud,
-         expenditures = visitors*AvgExp)
+  mutate(visitors_smud = smud_prop*viz_to_smud,
+         expenditures_smud = visitors_smud*AvgExp,
+         visitors_pud = pud_prop*viz_to_pud)
 mpa_summaries
 
 ## write it out
@@ -137,8 +161,16 @@ mpa_summaries
 #####################################################
 ### Now let's make a plot
 
+### plot of annual viz according to PUD proportions
 ggplot(mpa_summaries) +
-  geom_col(aes(x = reorder(NAME, visitors), y = visitors)) +
+  geom_col(aes(x = reorder(NAME, visitors_pud), y = visitors_pud)) +
+  coord_flip() + 
+  xlab(NULL) +
+  labs(title = "Annual Visitors to MPAs (based on PUD Proportion)")
+
+### plot of annual viz according to SMUD proportions
+ggplot(mpa_summaries) +
+  geom_col(aes(x = reorder(NAME, visitors_smud), y = visitors_smud)) +
   coord_flip() + 
   xlab(NULL) +
   labs(title = "Annual Visitors to MPAs (based on TUD+PUD Proportion)")
