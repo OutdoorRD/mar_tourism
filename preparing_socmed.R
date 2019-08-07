@@ -45,10 +45,11 @@ avg_ann_tud <- tud_monthly %>%
 # Maybe we should do something else like scale each from 0-1 then add them together?
 avg_ann_ud <- avg_ann_pud %>% 
   left_join(avg_ann_tud, by = "pid") %>%
-  mutate(avg_ann_smud = avg_ann_pud + avg_ann_tud)
+  mutate(avg_ann_smud = avg_ann_pud + avg_ann_tud,
+         avg_ann_smud_1_.1 = avg_ann_pud + .1*avg_ann_tud)
 
 # write it out
-#write_csv(avg_ann_ud, "avg_ann_smud_2005plus.csv")
+#write_csv(avg_ann_ud, "TESTavg_ann_smud_2005plus.csv")
 
 # lets look at our new response, avg_ann_smud
 summary(avg_ann_ud)

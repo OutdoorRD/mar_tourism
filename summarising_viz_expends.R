@@ -174,3 +174,49 @@ ggplot(mpa_summaries) +
   coord_flip() + 
   xlab(NULL) +
   labs(title = "Annual Visitors to MPAs (based on TUD+PUD Proportion)")
+
+
+################### Comparing viz numbers by country to PUD vs TUD and trying to figure out which one is better####
+country_summaries
+avg_ann_smud
+
+# ok, I need to know which country each pid falls into
+countries_aoi <- read_sf("~/Documents/MAR/GIS/Downscaling/CountriesplusTAOI_v3.shp")
+countries_aoi
+c_aoi_valid <- lwgeom::st_make_valid(countries_aoi)
+
+countries_pid_int <- st_intersection(aoi, c_aoi_valid)
+# note that this splits some pids. Below I drop those that are split into two pieces within the same
+#   country, but don't worry for now about pids which straddle countries
+countries_pid <- countries_pid_int %>% 
+  st_set_geometry(NULL) %>%
+  dplyr::select(pid, country = CNTRY_NAME) %>%
+  distinct()
+
+# combine with socmed and summarise by country
+countries_ud <- avg_ann_smud %>% 
+  left_join(countries_pid, by = "pid") %>%
+  group_by(country) %>%
+  summarise_at(vars(avg_ann_pud, avg_ann_tud, avg_ann_smud), sum) %>%
+  filter(!is.na(country))
+
+
+# let's put it together to plot
+countries_ud_emp <- countries_ud %>% 
+  left_join(country_summaries, by = c("country" = "Country")) %>%
+  gather(key = "socmed", value = "avg_ann_ud", c(avg_ann_pud, avg_ann_tud, avg_ann_smud))
+
+ggplot(countries_ud_emp) +
+  geom_point(aes(x = log1p(vizinAOI), y = log1p(avg_ann_ud))) +
+  geom_abline(slope = 1) +
+  facet_wrap(~socmed)
+
+# hmm, they all have the appropriate relationship
+# does a linear model help at all?
+mod1 <- lm(log1p(country_summaries$vizinAOI) ~ log1p(avg_ann_pud) + log1p(avg_ann_tud), data = countries_ud)
+summary(mod1)
+plot(mod1)
+
+mod2 <- lm(country_summaries$vizinAOI ~ avg_ann_pud + avg_ann_tud, data = countries_ud)
+summary(mod2)
+plot(mod2)
