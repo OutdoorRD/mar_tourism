@@ -1,6 +1,7 @@
 ## Preparing social media response ###
 ## MAR project
 
+library(sf)
 library(tidyverse)
 library(lubridate)
 
@@ -40,16 +41,29 @@ avg_ann_tud <- tud_monthly %>%
   summarise(avg_ann_tud = mean(annual_ud))
 
 ## combining them
+## For now (8/8/19), using the "viz model" for Belize districts which says that 
+##  Avg_ann_viz = 19*PUD + 101*TUD
+## TODO: Figure out this relationship (build a viz model) for the Bahamaian MPAs and Nat Parks
+
 ## NOTE: Variability in flickr PUD is totally washed out when just adding PUD + TUD
 # (masked by much higher numbers of tweets).
 # Maybe we should do something else like scale each from 0-1 then add them together?
 avg_ann_ud <- avg_ann_pud %>% 
   left_join(avg_ann_tud, by = "pid") %>%
-  mutate(avg_ann_smud = avg_ann_pud + avg_ann_tud,
-         avg_ann_smud_1_.1 = avg_ann_pud + .1*avg_ann_tud)
+  mutate(avg_ann_smud = 19*avg_ann_pud + 101*avg_ann_tud,
+         tud_prop = avg_ann_tud / sum(avg_ann_tud),
+         pud_prop = avg_ann_pud / sum(avg_ann_pud),
+         smud_prop = tud_prop + pud_prop)
 
 # write it out
-#write_csv(avg_ann_ud, "TESTavg_ann_smud_2005plus.csv")
+#write_csv(avg_ann_ud, "avg_ann_smud_2005plus_19_101_SMUD.csv")
+
+# and, let's make a shapefile version to write out
+aoi <- read_sf("~/Documents/MAR/ModelRuns/baseline_5k/T_aoi_v3_wgs_5k_pid.shp")
+aoi_smud <- avg_ann_ud %>% left_join(aoi, by = "pid")
+
+# write out
+#write_sf(aoi_smud, "~/Documents/MAR/ModelRuns/baseline_5k/aoi_smud.shp")
 
 # lets look at our new response, avg_ann_smud
 summary(avg_ann_ud)
@@ -61,7 +75,7 @@ sum(avg_ann_ud$avg_ann_smud == 0) / length(avg_ann_ud$avg_ann_smud)
 # 0.48 are 0s with 2005+ flickr data
 # 0.58 are 0s with 2012+ flickr data
 
-dotchart(avg_ann_ud$avg_ann_smud*14)
+dotchart(avg_ann_ud$avg_ann_smud)
 plot(density(avg_ann_ud$avg_ann_smud))
 
 # how about with the log1p
