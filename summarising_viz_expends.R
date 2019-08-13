@@ -22,7 +22,7 @@ avg_exp <- tibble(Country = c("Mexico", "Honduras", "Guatemala", "Belize"),
 country_summaries <- viz_2017 %>% 
   left_join(avg_exp, by = "Country") %>%
   mutate(Expenditures = vizinAOI*AvgExp) %>%
-  select(Country, Year, vizinAOI, AvgExp, Expenditures)
+  dplyr::select(Country, Year, vizinAOI, AvgExp, Expenditures)
 
 country_summaries 
 #write_csv(country_summaries, "~/Documents/MAR/ModelRuns/baseline_5k/viz_and_expends/country_summaries.csv")
@@ -80,7 +80,7 @@ mpa_grid_sm
 
 # and, summarise by mpa
 mpa_smud <- mpa_grid_sm %>%
-  group_by(NAME, Country) %>%
+  group_by(Name_short, Country) %>%
   summarise(smud_prop = sum(smud_in_mpa),
             #smud_tot = sum(avg_ann_smud),
             #pud_tot = sum(avg_ann_pud),
@@ -93,31 +93,31 @@ mpa_smud <- mpa_grid_sm %>%
 # let's have a look and see if these seems reasonable
 mpa_smud_tp <- st_set_geometry(mpa_smud, NULL)
 ggplot(mpa_smud_tp)+
-  geom_col(aes(x = reorder(NAME, smud_prop), y = smud_prop)) +
+  geom_col(aes(x = reorder(Name_short, smud_prop), y = smud_prop)) +
   coord_flip()
 
 # how about PUD on its own?
 ggplot(mpa_smud_tp)+
-  geom_col(aes(x = reorder(NAME, smud_prop), y = pud_prop)) +
+  geom_col(aes(x = reorder(Name_short, smud_prop), y = pud_prop)) +
   coord_flip()
 
 # and TUD?
 ggplot(mpa_smud_tp)+
-  geom_col(aes(x = reorder(NAME, smud_prop), y = tud_prop)) +
+  geom_col(aes(x = reorder(Name_short, smud_prop), y = tud_prop)) +
   coord_flip()
 
 ## how about alternative smud made with proportions?
 ggplot(mpa_smud_tp)+
-  geom_col(aes(x = reorder(NAME, smud_prop), y = smud2_prop)) +
+  geom_col(aes(x = reorder(Name_short, smud_prop), y = smud2_prop)) +
   coord_flip()
 
 # plotting together
 mpa_smud_tall <- mpa_smud %>% 
   st_set_geometry(NULL) %>%
-  gather(key = "source", value = "UD", -NAME, -Country)
+  gather(key = "source", value = "UD", -Name_short, -Country)
 
 ggplot(mpa_smud_tall %>% filter(source %in% c("tud_prop", "pud_prop"))) +
-  geom_col(aes(x = reorder(NAME, UD), y = UD, fill = source)) +
+  geom_col(aes(x = reorder(Name_short, UD), y = UD, fill = source)) +
   coord_flip() 
 
 
@@ -157,11 +157,18 @@ countries_ud_emp <- countries_ud %>%
 countries_ratios <- countries_ud_emp %>%
   mutate(ud_to_vis = vizinAOI/avg_ann_ud,
          socmed = str_extract(socmed, "(?<=_)[:alnum:]*$")) %>%
-  select(country, AvgExp, socmed, ud_to_vis)
+  dplyr::select(country, AvgExp, socmed, ud_to_vis)
 countries_ratios
 # Oof. Those are VERY different by country
 
-
+for(source in c("pud", "tud", "smud", "smud2")){
+  plots <- ggplot(countries_ratios %>% filter(socmed == source)) +
+    geom_col(aes(x = country, y = ud_to_vis)) +
+    labs(title = source)
+  print(plots)
+}
+  
+plots
 ##### Old #####
 # let's spread this data
 countries_ratios %>% select(country, socmed, ud_to_vis) %>%
@@ -216,17 +223,22 @@ mpa_summaries
 #write_sf(mpa_summaries, "~/Documents/MAR/ModelRuns/baseline_5k/viz_and_expends/mpa_summaries.shp")
 
 ############ Plotting MPA Summaries #########
-countrytp <- "Guatemala"
+
+countrytp <- "Honduras"
 ggplot(mpa_summaries_tall %>% filter(socmed %in% c("smud2"), Country == countrytp)) +
-  geom_col(aes(x = reorder(NAME, visitors), y = visitors), fill = "darkred", width = .7) +
+  geom_col(aes(x = reorder(Name_short, visitors), y = visitors), fill = "darkred", width = .7) +
   coord_flip() +
   xlab(NULL) +
   ylab("Annual Visitors") +
   labs(title = paste0("Estimated 2017 Visitation by MPA - ", countrytp)) +
   theme_bw()
 
-ggsave(paste0("~/Documents/MAR/Deliverables/August Workshop/figs/mpas_", countrytp, ".png"),
-       width = 9, height = 7, units = "in", scale = .6)
+#ggsave(paste0("~/Documents/MAR/Deliverables/August Workshop/figs/mpas_", countrytp, ".png"),
+ #      width = 9, height = 7, units = "in", scale = .6)
+
+# let's see if we can add expenditure information in text at the end of the bars
+mpa_summaries_tall
+
 
 ## plot all MPAs together
 ggplot(mpa_summaries_tall %>% filter(socmed %in% c("smud2"))) +

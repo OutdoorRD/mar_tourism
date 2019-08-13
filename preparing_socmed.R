@@ -53,7 +53,7 @@ avg_ann_ud <- avg_ann_pud %>%
   mutate(avg_ann_smud = 19*avg_ann_pud + 101*avg_ann_tud,
          tud_prop = avg_ann_tud / sum(avg_ann_tud),
          pud_prop = avg_ann_pud / sum(avg_ann_pud),
-         smud_prop = tud_prop + pud_prop)
+         smud_prop = (tud_prop + pud_prop)/2)   # make smud_prop = the proportion of total socmed that is in that gridcell
 
 # write it out
 #write_csv(avg_ann_ud, "avg_ann_smud_2005plus_19_101_SMUD.csv")
@@ -64,6 +64,11 @@ aoi_smud <- avg_ann_ud %>% left_join(aoi, by = "pid")
 
 # write out
 #write_sf(aoi_smud, "~/Documents/MAR/ModelRuns/baseline_5k/aoi_smud.shp")
+
+# and write out a version that only has cells which are greater than 0 smud_prop
+aoi_smud_gt_0 <- aoi_smud %>% filter(smud_prop > 0)
+#write_sf(aoi_smud_gt_0, "~/Documents/MAR/ModelRuns/baseline_5k/aoi_smud_gt_0.shp")
+
 
 # lets look at our new response, avg_ann_smud
 summary(avg_ann_ud)

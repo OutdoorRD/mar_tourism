@@ -16,7 +16,7 @@ data <- merge(shp@data, avgann, by='pid')
 props <- data %>% 
   group_by(CNTRY_NAME) %>%
   mutate(country_pud = sum(avg_ann_ud)) %>%
-  select(CNTRY_NAME, id_2, avg_ann_ud, country_pud) %>%
+  dplyr::select(CNTRY_NAME, id_2, avg_ann_ud, country_pud) %>%
   filter(id_2 == "1") %>%
   mutate(prop_viz = avg_ann_ud/country_pud)
 
@@ -52,6 +52,10 @@ proportioned_viz <- cruiseOvernight %>% filter(Year == 2017) %>%
   mutate(vizinAOI = CruiseOvernight*prop_viz)
 
 proportioned_viz
+
+ggplot(proportioned_viz, aes(y = log(avg_ann_ud), x= log(CruiseOvernight), label = Country)) + 
+  geom_point() +
+  geom_text()
 
 # let's write it out
 #write_csv(proportioned_viz, "../Data/proportioned_viz_2017_AOIv3.csv")
