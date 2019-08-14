@@ -161,6 +161,19 @@ countries_ratios <- countries_ud_emp %>%
 countries_ratios
 # Oof. Those are VERY different by country
 
+##### creating a shapefile that includes estimated visitation per grid cell using those viz ratios ####
+vis_per_cell <- avg_ann_smud %>% 
+  left_join(countries_pid, by = "pid") %>%
+  select(pid, smud2 = smud_prop, country) %>%
+  left_join(countries_ratios %>% filter(socmed == "smud2"), by = "country") %>%
+  mutate(est_vis = smud2*ud_to_vis,
+         est_exp = round(est_vis*AvgExp)) %>%
+  left_join(aoi, by = "pid")
+
+## write it out
+#write_sf(vis_per_cell, "~/Documents/MAR/ModelRuns/baseline_5k/aoi_viz_exp.shp")
+
+
 for(source in c("pud", "tud", "smud", "smud2")){
   plots <- ggplot(countries_ratios %>% filter(socmed == source)) +
     geom_col(aes(x = country, y = ud_to_vis)) +

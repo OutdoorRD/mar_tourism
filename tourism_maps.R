@@ -1,0 +1,165 @@
+########## Making maps of tourism for MAR workshop ################
+### Starting with baseline maps
+
+library(sf)
+library(tidyverse)
+library(rnaturalearth) # for country maps
+library(rnaturalearthdata)
+library(ggspatial)
+
+# grab country outlines from rnaturalearth
+countries1 <- ne_countries(country = c("Mexico", "Belize", "Guatemala", "Honduras"),
+            returnclass = "sf")
+#ggplot(countries) + geom_sf()
+
+# grab tourism aoi, mpas, and viz and expenditure information
+countries <- read_sf("~/Documents/MAR/GIS/BordersandProtectedAreas/countries_MAR.shp")
+aoi_outline <- read_sf("~/Documents/MAR/GIS/AOI/AOI_v3/Tourism_AOI_v3.shp")
+mpas <- read_sf("~/Documents/MAR/GIS/BordersandProtectedAreas/MPA/MPA_Network_WGS84_4326.shp")
+vis_per_cell <- read_sf("~/Documents/MAR/ModelRuns/baseline_5k/aoi_viz_exp.shp")
+
+## turn vis_per_cell into lat/long table to plot as dots for propotional
+##  bubbles
+vis_per_point <- vis_per_cell %>% st_centroid()
+
+st_coordinates(st_centroid(vis_per_cell))
+
+ggplot() +
+  geom_sf(data = countries) +
+  geom_sf(data = aoi_outline, fill = NA) +
+  #geom_sf(data = mpas) +
+  geom_sf(data = vis_per_point %>% filter(est_vis > 0), 
+          aes(size = est_vis), alpha = .3, col = "darkred",
+          show.legend = "point") +
+  scale_size_area(name = "Annual Visitors (2017)", 
+                  max_size = 15, # size of min and max bubbles
+                  breaks = c(10, 100, 1000, 10000, 100000, 500000),
+                  labels = c("1-10", "10-100", "100-1,000", "1,000-10,000", "10,000 - 100,000", "100,000+"),
+                  guide = "legend") +
+  coord_sf(xlim = c(-89.7, -85.5), ylim = c(15.25, 22.5), crs = 4326) +
+  theme_bw()
+
+#ggsave("~/Documents/MAR/Deliverables/August Workshop/figs/MAR_tourism_v4.png",
+ #      width = 6, height = 6, units = "in")
+
+###### And... making for individual countries ######
+## first, let's read in my MPA buffer and then select only cells within it
+mpa_buffer <- read_sf("~/Documents/MAR/GIS/BordersandProtectedAreas/MPA/MPA_buffer.shp")
+
+vis_pc_mpas <- vis_per_cell %>% 
+  filter(lengths(st_within(vis_per_cell, mpa_buffer)) > 0)
+
+# make a column which has cells categorized based on estimated vis
+vis_pc_groups <- vis_pc_mpas %>%
+  mutate(vis_group = cut(est_vis, 
+                         breaks = c(-1, 0, 100, 1000, 10000, 1000000),
+                         ordered_result = TRUE))
+# make a tibble that has MPA names and coordinates
+mpa_pts <- cbind(mpas, st_coordinates(st_centroid(mpas)))
+
+## Mexico
+ggplot() +
+  geom_sf(data = countries) +
+  geom_sf(data = vis_pc_groups %>% filter(country == "Mexico"),
+          aes(fill = vis_group)) +
+  scale_fill_brewer(palette = "Greens",
+                    name = "Annual Visitors",
+                    labels = c("0", "1-100", "100-1000", "1000-10,000", "10,000+")) +
+  #scale_fill_viridis_d("magma") +
+  #scale_fill_gradient(breaks = c(10, 100, 1000, 10000, 100000, 500000),
+   #                     labels = c("1-10", "10-100", "100-1,000", "1,000-10,000", "10,000 - 100,000", "100,000+")) +
+  geom_sf(data = mpas, fill = NA, col = "black", lwd = 1) +
+ # geom_text(data = mpa_pts, aes(x =X, y=Y-.25, label = Name_short)) +
+  geom_text(aes(x = c(-88.6, -87.95, -87.2, -87.2) , y = c(21.75, 21.8, 22, 21.1), 
+                label = c("Dzilam", "Ria Lagartos", "Tiburon Ballena", "Yum Balam"))) +
+  coord_sf(xlim = c(-89.1, -86.5), ylim = c(20.8, 22.25), crs = 4326) +
+  labs(title = "Estimated 2017 Visitation to Mexico MPAs") +
+  annotation_scale() +
+  xlab(NULL) +
+  ylab(NULL) +
+  theme_bw()
+
+#ggsave("~/Documents/MAR/Deliverables/August Workshop/figs/mpas_Mexico_v2.png",
+ #      width = 8, height = 6, unit = "in")
+
+
+## Honduras
+ggplot() +
+  geom_sf(data = countries) +
+  geom_sf(data = vis_pc_groups %>% filter(country == "Honduras", !pid %in% c(1383:1384, 1467)),
+          aes(fill = vis_group)) +
+  scale_fill_brewer(palette = "Greens",
+                    name = "Annual Visitors",
+                    labels = c("0", "1-100", "100-1000", "1000-10,000", "10,000+")) +
+  #scale_fill_viridis_d("magma") +
+  #scale_fill_gradient(breaks = c(10, 100, 1000, 10000, 100000, 500000),
+  #                     labels = c("1-10", "10-100", "100-1,000", "1,000-10,000", "10,000 - 100,000", "100,000+")) +
+  geom_sf(data = mpas %>% filter(Country == "Honduras"), fill = NA, col = "black", lwd = 1) +
+  #geom_text(data = mpa_pts, aes(x =X, y=Y-.25, label = Name_short)) +
+  geom_text(aes(x = c(-88.6, -87.95, -87.2, -87.2, 
+                      -88.25, -88.2, -87.7, -87.6, -87.2, -86.5), 
+                y = c(21.75, 21.8, 22, 21.1, 
+                      15.45, 16.02, 15.57, 16.25, 15.57, 15.6), 
+                label = c("Dzilam", "Ria Lagartos", "Tiburon Ballena", "Yum Balam",
+                          "Cuyamel Omoa", "Interconexion", "J. Kawas", "Bahia de Tela",
+                          "Punta Izopo", "Cayos Cochinos"))) +
+  coord_sf(xlim = c(-88.5, -86), ylim = c(15.25, 16.5), crs = 4326) +
+  labs(title = "Estimated 2017 Visitation to Honduras MPAs") +
+  annotation_scale() +
+  xlab(NULL) +
+  ylab(NULL) +
+  theme_bw()
+
+#ggsave("~/Documents/MAR/Deliverables/August Workshop/figs/mpas_Honduras_v2.png",
+ #     width = 8, height = 5, unit = "in")
+
+## Guatemala
+ggplot() +
+  geom_sf(data = countries) +
+  geom_sf(data = vis_pc_groups %>% filter(pid %in% c(540:1370), 
+                                          !pid %in% c(558:560, 638:640, 718:722, 802:804, 883:886, 968), 
+                                          country != "Honduras"),
+          aes(fill = vis_group)) +
+  scale_fill_brewer(palette = "Greens",
+                    name = "Annual Visitors",
+                    labels = c("0", "1-100", "100-1000", "1000-10,000", "10,000+")) +
+ geom_sf(data = mpas %>% filter(Country == "Guatemala"), fill = NA, col = "black", lwd = 1) +
+#  geom_text(data = mpa_pts, aes(x =X, y=Y-.25, label = Name_short)) +
+  coord_sf(xlim = c(-89.5, -88.2), ylim = c(15.25, 16.2), crs = 4326) +
+  labs(title = "Estimated 2017 Visitation to Rio Sarstun") +
+  annotation_scale() +
+  xlab(NULL) +
+  ylab(NULL) +
+  theme_bw()
+
+#ggsave("~/Documents/MAR/Deliverables/August Workshop/figs/mpas_Guatemala_v2.png",
+ #    width = 8, height = 6, unit = "in")
+
+## Belize
+ggplot() +
+  geom_sf(data = countries) +
+  geom_sf(data = vis_pc_groups %>% filter(country == "Belize", !pid %in% c(540:1370)),
+          aes(fill = vis_group)) +
+  scale_fill_brewer(palette = "Greens",
+                    name = "Annual Visitors",
+                    labels = c("0", "1-100", "100-1000", "1000-10,000", "10,000+")) +
+  #scale_fill_viridis_d("magma") +
+  #scale_fill_gradient(breaks = c(10, 100, 1000, 10000, 100000, 500000),
+  #                     labels = c("1-10", "10-100", "100-1,000", "1,000-10,000", "10,000 - 100,000", "100,000+")) +
+  geom_sf(data = mpas %>% filter(Country == "Belize"), fill = NA, col = "black", lwd = 1) +
+  geom_text(data = mpa_pts %>% filter(Country == "Belize", 
+                                      !Name_short %in% c("Bacalar Chico", "Laughing Bird Caye",
+                                                         "Sapodilla Cayes")), 
+            aes(x =X-.5, y=Y, label = Name_short)) +
+  geom_text(aes(x = c(-87.45, -87.75, -87.8), 
+                y = c(18.15, 16.4, 16.15), 
+                label = c("Bacalar Chico", "Laughing Bird Caye", "Sapodilla Cayes"))) +
+  coord_sf(xlim = c(-89.5, -87), ylim = c(15.75, 18.5), crs = 4326) +
+  labs(title = "Estimated 2017 Visitation to Belize MPAs") +
+  annotation_scale() +
+  xlab(NULL) +
+  ylab(NULL) +
+  theme_bw()
+
+ggsave("~/Documents/MAR/Deliverables/August Workshop/figs/mpas_Belize_v2.png",
+     width = 7, height = 9, unit = "in")
