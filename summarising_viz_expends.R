@@ -237,7 +237,7 @@ mpa_summaries
 
 ############ Plotting MPA Summaries #########
 
-countrytp <- "Honduras"
+countrytp <- "Mexico"
 ggplot(mpa_summaries_tall %>% filter(socmed %in% c("smud2"), Country == countrytp)) +
   geom_col(aes(x = reorder(Name_short, visitors), y = visitors), fill = "darkred", width = .7) +
   coord_flip() +
@@ -255,12 +255,15 @@ mpa_summaries_tall
 
 ## plot all MPAs together
 ggplot(mpa_summaries_tall %>% filter(socmed %in% c("smud2"))) +
-  geom_col(aes(x = reorder(NAME, visitors), y = visitors), fill = "darkred", width = .7) +
+  geom_col(aes(x = reorder(Name_short, visitors), y = visitors), fill = "darkred", width = .7) +
   coord_flip() +
   xlab(NULL) +
   ylab("Annual Visitors") +
   labs(title = paste0("Estimated 2017 Visitation by MPA")) +
   theme_bw()
+
+# write it out
+#ggsave(paste0("~/Documents/MAR/Deliverables/August Workshop/figs/mpas_all.png"), width = 8, height = 8, units = "in")
 
 ## plot all MPAs together, showing alternative social media combos
 ggplot(mpa_summaries_tall %>% filter(socmed %in% c("smud2", "smud", "pud"))) +

@@ -48,6 +48,8 @@ mpa_buffer <- read_sf("~/Documents/MAR/GIS/BordersandProtectedAreas/MPA/MPA_buff
 
 vis_pc_mpas <- vis_per_cell %>% 
   filter(lengths(st_within(vis_per_cell, mpa_buffer)) > 0)
+# write it out
+#write_sf(vis_pc_mpas, "~/Documents/MAR/ModelRuns/baseline_5k/aoi_viz_exp_mpa_plus.shp")
 
 # make a column which has cells categorized based on estimated vis
 vis_pc_groups <- vis_pc_mpas %>%
@@ -79,7 +81,7 @@ ggplot() +
   ylab(NULL) +
   theme_bw()
 
-#ggsave("~/Documents/MAR/Deliverables/August Workshop/figs/mpas_Mexico_v2.png",
+#ggsave("~/Documents/MAR/Deliverables/August Workshop/figs/viz_map_mpas_Mexico.png",
  #      width = 8, height = 6, unit = "in")
 
 
@@ -110,7 +112,7 @@ ggplot() +
   ylab(NULL) +
   theme_bw()
 
-#ggsave("~/Documents/MAR/Deliverables/August Workshop/figs/mpas_Honduras_v2.png",
+#ggsave("~/Documents/MAR/Deliverables/August Workshop/figs/viz_map_mpas_Honduras.png",
  #     width = 8, height = 5, unit = "in")
 
 ## Guatemala
@@ -132,7 +134,7 @@ ggplot() +
   ylab(NULL) +
   theme_bw()
 
-#ggsave("~/Documents/MAR/Deliverables/August Workshop/figs/mpas_Guatemala_v2.png",
+#ggsave("~/Documents/MAR/Deliverables/August Workshop/figs/viz_map_mpas_Guatemala.png",
  #    width = 8, height = 6, unit = "in")
 
 ## Belize
@@ -161,5 +163,5 @@ ggplot() +
   ylab(NULL) +
   theme_bw()
 
-ggsave("~/Documents/MAR/Deliverables/August Workshop/figs/mpas_Belize_v2.png",
+ggsave("~/Documents/MAR/Deliverables/August Workshop/figs/viz_map_mpas_Belize.png",
      width = 7, height = 9, unit = "in")
