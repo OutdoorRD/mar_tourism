@@ -8,8 +8,8 @@ library(rnaturalearthdata)
 library(ggspatial)
 
 # grab country outlines from rnaturalearth
-countries1 <- ne_countries(country = c("Mexico", "Belize", "Guatemala", "Honduras"),
-            returnclass = "sf")
+#countries1 <- ne_countries(country = c("Mexico", "Belize", "Guatemala", "Honduras"),
+ #           returnclass = "sf")
 #ggplot(countries) + geom_sf()
 
 # grab tourism aoi, mpas, and viz and expenditure information
@@ -17,6 +17,11 @@ countries <- read_sf("~/Documents/MAR/GIS/BordersandProtectedAreas/countries_MAR
 aoi_outline <- read_sf("~/Documents/MAR/GIS/AOI/AOI_v3/Tourism_AOI_v3.shp")
 mpas <- read_sf("~/Documents/MAR/GIS/BordersandProtectedAreas/MPA/MPA_Network_WGS84_4326.shp")
 vis_per_cell <- read_sf("~/Documents/MAR/ModelRuns/baseline_5k/aoi_viz_exp.shp")
+cities <- read_sf("~/Documents/MAR/GIS/Predictors/Infrastructure/ne_10m_populated_places_simple_MAR.shp")
+
+# filter cities to be a few key ones along the coast
+cities_mar <- cities %>% filter(nameascii %in% c("Cancun", "Cozumel", "Chetumal", "Belize City", 
+                                   "Puerto Barrios", "San Pedro Sula", "La Ceiba"))
 
 ## turn vis_per_cell into lat/long table to plot as dots for propotional
 ##  bubbles
@@ -31,15 +36,17 @@ ggplot() +
   geom_sf(data = vis_per_point %>% filter(est_vis > 0), 
           aes(size = est_vis), alpha = .3, col = "darkred",
           show.legend = "point") +
+  geom_sf(data = cities_mar) +
+  geom_text(data = cities_mar, aes(x = longitude+.7, y = latitude-.1, label = name), size = 3) +
   scale_size_area(name = "Annual Visitors (2017)", 
-                  max_size = 15, # size of min and max bubbles
+                  max_size = 15, # size of max bubbles
                   breaks = c(10, 100, 1000, 10000, 100000, 500000),
                   labels = c("1-10", "10-100", "100-1,000", "1,000-10,000", "10,000 - 100,000", "100,000+"),
                   guide = "legend") +
   coord_sf(xlim = c(-89.7, -85.5), ylim = c(15.25, 22.5), crs = 4326) +
   theme_bw()
 
-#ggsave("~/Documents/MAR/Deliverables/August Workshop/figs/MAR_tourism_v4.png",
+#ggsave("~/Documents/MAR/Deliverables/August Workshop/figs/MAR_tourism_v4_labels.png",
  #      width = 6, height = 6, units = "in")
 
 ###### And... making for individual countries ######
@@ -74,6 +81,9 @@ ggplot() +
  # geom_text(data = mpa_pts, aes(x =X, y=Y-.25, label = Name_short)) +
   geom_text(aes(x = c(-88.6, -87.95, -87.2, -87.2) , y = c(21.75, 21.8, 22, 21.1), 
                 label = c("Dzilam", "Ria Lagartos", "Tiburon Ballena", "Yum Balam"))) +
+  geom_sf(data = cities_mar, shape = 23, fill = "yellow", size = 3.5) +
+  geom_text(data = cities_mar, aes(x = longitude, y = latitude, label = name), 
+            nudge_x = .1, nudge_y = -.1, fontface = "italic") +
   coord_sf(xlim = c(-89.1, -86.5), ylim = c(20.8, 22.25), crs = 4326) +
   labs(title = "Estimated 2017 Visitation to Mexico MPAs") +
   annotation_scale() +
@@ -81,7 +91,7 @@ ggplot() +
   ylab(NULL) +
   theme_bw()
 
-#ggsave("~/Documents/MAR/Deliverables/August Workshop/figs/viz_map_mpas_Mexico.png",
+#ggsave("~/Documents/MAR/Deliverables/August Workshop/figs/viz_map_mpas_Mexico_label.png",
  #      width = 8, height = 6, unit = "in")
 
 
