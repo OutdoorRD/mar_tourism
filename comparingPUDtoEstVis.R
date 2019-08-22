@@ -102,6 +102,20 @@ ggplot(belize_3_socmed_ests, aes(x = log1p(VisAvg), y = log1p(avg_ann_ud),
   scale_x_continuous(limits = c(0, 13)) +
   scale_y_continuous(limits = c(0, 13))
 
+## flickr and twitter only to give to katie 8/22/19
+ggplot(belize_3_socmed_ests %>% filter(socmed != "tripadvisor"), 
+       aes(y = (VisAvg), x = (avg_ann_ud), 
+                                 label = District, col = socmed)) +
+  geom_point() +
+  geom_label() +
+  geom_abline(slope =1, linetype = 2) +
+  scale_x_continuous(trans = "log1p", limits = c(30, 2500), name = "Average Annual Social Media User-days") +
+  scale_y_continuous(trans = "log1p", limits = c(30, 200000), name = "Average Annual Visitation (2015-2017)") +
+  labs(title = "Belize District-level Tourism",
+       caption = "(Annual visitation numbers provided by the Belize Tourism Board, estimated from reported destinations in the VEMS Survey)")
+# write it out
+#ggsave("../Deliverables/August Workshop/figs/Belize_district_visitation.png", width = 9, height = 6, units = "in")
+
 # looking at correlation
 
 belize_flickr <- belize_socmed_ests %>% filter(socmed == "flickr")
