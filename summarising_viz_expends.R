@@ -140,18 +140,7 @@ ggplot(mpa_comps %>% filter(Country == "Belize")) +
   geom_point(aes(x = Visitation, y = est_visitors)) 
   
 ## Hol Chan is underestimated by all three socmed options
-# Let's calculate correlation between each of these
-mpa_tud <- mpa_comps %>% filter(socmed == "tud_prop", !is.na(Visitation))
-cor(mpa_tud$est_visitors, mpa_tud$Visitation)
-# .79 correlation
 
-mpa_pud <- mpa_comps %>% filter(socmed == "pud_prop", !is.na(Visitation))
-cor(mpa_pud$est_visitors, mpa_pud$Visitation)
-
-tud_mod <- lm(Visitation ~ -1 + est_visitors, data = mpa_comps %>% filter(socmed == "tud_prop"))
-summary(tud_mod)
-pud_mod <- lm(Visitation ~ -1 + est_visitors, data = mpa_comps %>% filter(socmed == "pud_prop"))
-summary(pud_mod)
 
 ## correlation I think isn't actually what I want... how about RMSE?
 mpa_comps %>%
@@ -161,28 +150,22 @@ mpa_comps %>%
   summarise(RMSE = mean(sq_error))
 # great, smud is actually the lowest, and therefore the best
 
+### Not sure what to do about Hol Chan being low. See notes in MAR notes and thoughts (pg 16)
+##   for a few things I investigated but rejected.
+
 
 ############ Plotting MPA Summaries #########
-countrytp <- "Belize"
-ggplot(mpa_summaries %>% filter(Country == countrytp)) +
+countrytp <- "Honduras"
+ggplot(mpa_summaries %>% filter(Country == countrytp, socmed == "smud_prop")) +
   geom_col(aes(x = reorder(MPA_short, visitors), y = visitors), fill = "darkred", width = .7) +
   coord_flip() +
   xlab(NULL) +
   ylab("Annual Visitors") +
-  labs(title = paste0("Estimated 2017 Visitation by MPA - ", countrytp)) +
+  labs(title = paste0("Estimated 2017 Visitation by MPA - ", countrytp),
+       subtitle = paste("Updated", Sys.Date())) +
   theme_bw()
 
-
-countrytp <- "Belize"
-ggplot(mpa_summaries_tall %>% filter(socmed %in% c("smud2"), Country == countrytp)) +
-  geom_col(aes(x = reorder(Name_short, visitors), y = visitors), fill = "darkred", width = .7) +
-  coord_flip() +
-  xlab(NULL) +
-  ylab("Annual Visitors") +
-  labs(title = paste0("Estimated 2017 Visitation by MPA - ", countrytp)) +
-  theme_bw()
-
-#ggsave(paste0("~/Documents/MAR/Deliverables/August Workshop/figs/mpas_", countrytp, ".png"),
+#ggsave(paste0("figs/mpas_", countrytp, ".png"),
 #      width = 9, height = 7, units = "in", scale = .6)
 
 # let's see if we can add expenditure information in text at the end of the bars
@@ -190,8 +173,8 @@ mpa_summaries_tall
 
 
 ## plot all MPAs together
-ggplot(mpa_summaries_tall %>% filter(socmed %in% c("smud2"))) +
-  geom_col(aes(x = reorder(Name_short, visitors), y = visitors), fill = "darkred", width = .7) +
+ggplot(mpa_summaries %>% filter(socmed %in% c("smud_prop"))) +
+  geom_col(aes(x = reorder(MPA_short, visitors), y = visitors), fill = "darkred", width = .7) +
   coord_flip() +
   xlab(NULL) +
   ylab("Annual Visitors") +
@@ -200,6 +183,22 @@ ggplot(mpa_summaries_tall %>% filter(socmed %in% c("smud2"))) +
 
 # write it out
 #ggsave(paste0("~/Documents/MAR/Deliverables/August Workshop/figs/mpas_all.png"), width = 8, height = 8, units = "in")
+
+## Let's do the all MPAs plot, but add in the empirical vis numbers
+mpas_comps_tall <- mpa_comps %>% 
+  filter(socmed == "smud_prop") %>%
+  gather(key = "source", value = "visitation", est_visitors, Visitation)
+  
+ggplot(mpas_comps_tall) +
+  geom_col(aes(x = reorder(MPA_short, prop), y = visitation, color = Country, alpha = source), 
+           position = "dodge", width = .8) +
+  coord_flip() +
+  scale_alpha_discrete(breaks = c("est_visitors", "Visitation"),
+                       labels = c("Model estimate", "Empirical Visitation")) +
+  labs(title = "Annual Visitation by MPA. Model estimates vs. Empirical viz numbers",
+       subtitle = paste("Updated", Sys.Date()))
+#ggsave("figs/mpas_smud_v_empirical.png", height = 8, width = 8, unit = "in")
+
 
 ## plot all MPAs together, showing alternative social media combos
 ggplot(mpa_summaries_tall %>% filter(socmed %in% c("smud2", "smud", "pud", "tud"),
