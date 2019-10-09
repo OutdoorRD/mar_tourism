@@ -1,11 +1,15 @@
 #######
 ###  Summarising Visitation and Expenditures by MAR, country, and MPA
 ###
-###  Requires: Total visitors to the AOI in each country to be distributed out based on PUD and TUD
-###     (proportioned_viz_2015.csv from downscaling.r)
+###  Requires: 
+###     Total visitors to the AOI in each country to be distributed out based on PUD and TUD
+###         (proportioned_viz_2015.csv from downscaling.r)
+###     Outputs from preparing_socmed.R
 
 library(sf)
 library(tidyverse)
+
+setwd("~/Documents/MAR/ModelRuns/baseline_5k_intersect/")
 
 # read in total visitation numbers by country (proportioned from overall country numbers into the AOI in 
 #  `downscaling.R`)
@@ -17,6 +21,9 @@ viz_2017 <- read_csv("~/Documents/MAR/Data/proportioned_viz_2017_AOIv3.csv")
 avg_exp <- tibble(Country = c("Mexico", "Honduras", "Guatemala", "Belize"),
                   AvgExp = c(809, 572, 614, 854))
 
+# Read in AOI and smud info
+aoi_smud <- read_sf("aoi_smud.shp")
+
 ## First, let's summarise by country (since we're almost already there)
 
 country_summaries <- viz_2017 %>% 
@@ -25,7 +32,7 @@ country_summaries <- viz_2017 %>%
   dplyr::select(Country, Year, vizinAOI, AvgExp, Expenditures)
 
 country_summaries 
-#write_csv(country_summaries, "~/Documents/MAR/ModelRuns/baseline_5k/viz_and_expends/country_summaries.csv")
+#write_csv(country_summaries, "viz_and_expends/country_summaries.csv")
 
 ## And, for the entire AOI?
 mar_summary <- country_summaries %>% 
@@ -33,9 +40,193 @@ mar_summary <- country_summaries %>%
             Expenditures = sum(Expenditures),
             Year = mean(Year))
 mar_summary
-#write_csv(mar_summary, "~/Documents/MAR/ModelRuns/baseline_5k/viz_and_expends/mar_summary.csv")
+#write_csv(mar_summary, "viz_and_expends/mar_summary.csv")
 
 ############# And... how about by those MPAs? ###################
+### As of 10/9/19, this should be much easier since my new AOI is intersected with the MPA boundaries
+### See below for old code (used for August workshop summaries), that calculated the proportion
+###   of each hex that fell inside the MPA and then proportioned the viz accordingly.
+### The new AOI is an improvement since it shouldn't include adjacent cities in MPAs
+
+mpa_smud <- aoi_smud %>%
+  group_by(Name_short = Nm_shrt, Country = NAME) %>%
+  summarise(smud_prop = sum(smd_prp),
+            tud_prop = sum(tud_prp),
+            pud_prop = sum(pud_prp)) %>%
+  filter(!is.na(Name_short))
+plot(mpa_smud)
+
+# great. So now... how to get from smud to number of visitors and expenditures?
+
+## Need to find a SMUD to visitor ratio for each country
+## Note: this is still necessary, since my proportions above represent the proportion of ALL tourism to the
+##   MAR region which is represented by that cell. But, I want to proportion out the COUNTRY-level tourism
+##   numbers
+
+# So, summarise by country
+countries_smud <- aoi_smud %>%
+  group_by(Country = NAME) %>%
+  summarise(smud_prop = sum(smd_prp),
+            tud_prop = sum(tud_prp),
+            pud_prop = sum(pud_prp)) %>%
+  filter(!is.na(Country))
+
+
+# let's put it together to plot
+countries_ud_emp <- countries_smud %>% 
+  left_join(country_summaries, by = "Country") %>%
+  gather(key = "socmed", value = "prop_ud", c(smud_prop, tud_prop, pud_prop))
+
+# and, calculate the vis to prop_ud ratio for each 
+countries_ratios <- countries_ud_emp %>%
+  st_set_geometry(NULL) %>%
+  mutate(ud_to_vis = vizinAOI/prop_ud) %>% #,
+        # socmed = str_extract(socmed, "(?<=_)[:alnum:]*$")) %>%
+  dplyr::select(Country, AvgExp, socmed, ud_to_vis)
+countries_ratios
+# Oof. Those are VERY different by country
+
+##### creating a shapefile that includes estimated visitation per grid cell using those viz ratios ####
+## First, just using smud_prop
+vis_per_cell <- aoi_smud %>%
+  select(pid, smud_prop = smd_prp, Country = NAME, MPA = NAME_2, MPA_short = Nm_shrt, geometry) %>%
+  left_join(countries_ratios %>% filter(socmed == "smud_prop"), by = "Country") %>%
+  mutate(est_vis = smud_prop*ud_to_vis,
+         est_exp = round(est_vis*AvgExp))
+
+## write it out
+#write_sf(vis_per_cell, "aoi_viz_exp.shp")
+
+## Let's also do this with tud and pud seperately to see if one of them better matches empirical numbers
+vis_per_cell_sep <- aoi_smud %>%
+  select(pid, smud_prop = smd_prp, tud_prop = tud_prp, pud_prop = pud_prp, Country = NAME, MPA = NAME_2, MPA_short = Nm_shrt, geometry) %>%
+  gather(key = "socmed", value = "prop", tud_prop, pud_prop, smud_prop) %>%
+  left_join(countries_ratios, by = c("Country", "socmed")) %>%
+  mutate(est_vis = prop*ud_to_vis,
+         est_exp = round(est_vis*AvgExp))
+
+## so... let's calculate visitors and expenditures by mpa
+mpa_summaries <- vis_per_cell_sep %>%
+  filter(!is.na(MPA), !is.na(Country)) %>%
+  group_by(Country, MPA, MPA_short, socmed) %>%
+  summarise(prop = sum(prop),
+            visitors = sum(est_vis),
+            expenditures = sum(est_exp))
+mpa_summaries
+# write it out
+#write_csv(mpa_summaries, "viz_and_expends/mpa_summaries.csv")
+
+##### Let's pull in whatever empirical numbers I have for MPA visitors and see how my estimates compare
+MPA_emp_viz <- read_csv("~/Documents/MAR/Data/MPA_Emp_Visitation_10_09_19.csv")
+# I have multiple estimates/years for Hol Chan and Cayos Cochinos and South Water Caye. Let's drop some
+MPA_emp_viz_sub <- MPA_emp_viz %>% 
+  filter(!(MPA == "Hol Chan" & Year == 2016),
+         !(MPA_short == "Cayos Cochinos" & Year == 2016),
+         !(MPA_short == "South Water Caye" & Visitation == 4600))
+
+# bind on to my estimates to plot
+mpa_comps <- mpa_summaries %>%
+  rename(est_visitors = visitors) %>%
+  left_join(MPA_emp_viz_sub)
+
+ggplot(mpa_comps %>% filter(socmed == "smud_prop")) +
+  geom_label(aes(x = Visitation, y = est_visitors, label = MPA_short, col = socmed)) +
+  geom_point(aes(x = Visitation, y = est_visitors), col = "blue") +
+  geom_abline(slope = 1)# +
+  facet_grid(rows = vars(socmed))
+
+ggplot(mpa_comps %>% filter(Country == "Belize")) +
+  geom_abline(slope = 1) +
+  geom_point(aes(x = Visitation, y = est_visitors)) 
+  
+## Hol Chan is underestimated by all three socmed options
+# Let's calculate correlation between each of these
+mpa_tud <- mpa_comps %>% filter(socmed == "tud_prop", !is.na(Visitation))
+cor(mpa_tud$est_visitors, mpa_tud$Visitation)
+# .79 correlation
+
+mpa_pud <- mpa_comps %>% filter(socmed == "pud_prop", !is.na(Visitation))
+cor(mpa_pud$est_visitors, mpa_pud$Visitation)
+
+tud_mod <- lm(Visitation ~ -1 + est_visitors, data = mpa_comps %>% filter(socmed == "tud_prop"))
+summary(tud_mod)
+pud_mod <- lm(Visitation ~ -1 + est_visitors, data = mpa_comps %>% filter(socmed == "pud_prop"))
+summary(pud_mod)
+
+## correlation I think isn't actually what I want... how about RMSE?
+mpa_comps %>%
+  filter(!is.na(Visitation)) %>%
+  mutate(sq_error = (est_visitors - Visitation)^2) %>%
+  group_by(socmed) %>%
+  summarise(RMSE = mean(sq_error))
+# great, smud is actually the lowest, and therefore the best
+
+
+############ Plotting MPA Summaries #########
+countrytp <- "Belize"
+ggplot(mpa_summaries %>% filter(Country == countrytp)) +
+  geom_col(aes(x = reorder(MPA_short, visitors), y = visitors), fill = "darkred", width = .7) +
+  coord_flip() +
+  xlab(NULL) +
+  ylab("Annual Visitors") +
+  labs(title = paste0("Estimated 2017 Visitation by MPA - ", countrytp)) +
+  theme_bw()
+
+
+countrytp <- "Belize"
+ggplot(mpa_summaries_tall %>% filter(socmed %in% c("smud2"), Country == countrytp)) +
+  geom_col(aes(x = reorder(Name_short, visitors), y = visitors), fill = "darkred", width = .7) +
+  coord_flip() +
+  xlab(NULL) +
+  ylab("Annual Visitors") +
+  labs(title = paste0("Estimated 2017 Visitation by MPA - ", countrytp)) +
+  theme_bw()
+
+#ggsave(paste0("~/Documents/MAR/Deliverables/August Workshop/figs/mpas_", countrytp, ".png"),
+#      width = 9, height = 7, units = "in", scale = .6)
+
+# let's see if we can add expenditure information in text at the end of the bars
+mpa_summaries_tall
+
+
+## plot all MPAs together
+ggplot(mpa_summaries_tall %>% filter(socmed %in% c("smud2"))) +
+  geom_col(aes(x = reorder(Name_short, visitors), y = visitors), fill = "darkred", width = .7) +
+  coord_flip() +
+  xlab(NULL) +
+  ylab("Annual Visitors") +
+  labs(title = paste0("Estimated 2017 Visitation by MPA")) +
+  theme_bw()
+
+# write it out
+#ggsave(paste0("~/Documents/MAR/Deliverables/August Workshop/figs/mpas_all.png"), width = 8, height = 8, units = "in")
+
+## plot all MPAs together, showing alternative social media combos
+ggplot(mpa_summaries_tall %>% filter(socmed %in% c("smud2", "smud", "pud", "tud"),
+                                     Country == "Belize")) +
+  geom_col(aes(x = reorder(Name_short, visitors), y = visitors, fill = socmed), position = "dodge", width = .7) +
+  coord_flip() +
+  xlab(NULL) +
+  ylab("Annual Visitors") +
+  labs(title = paste0("Estimated 2017 Visitation by MPA")) +
+  theme_bw()
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+####################################################
+######### Old MPA intersection, proportioning, and summary code ####
 
 # pulling in gridded AOI & MPA shapefiles
 aoi <- read_sf("~/Documents/MAR/ModelRuns/baseline_5k/T_aoi_v3_wgs_5k_pid.shp")
@@ -90,6 +281,8 @@ mpa_smud <- mpa_grid_sm %>%
             smud2_prop = sum(smud_prop_in_mpa)) %>%
   ungroup()
 
+
+
 # let's have a look and see if these seems reasonable
 mpa_smud_tp <- st_set_geometry(mpa_smud, NULL)
 ggplot(mpa_smud_tp)+
@@ -118,14 +311,7 @@ mpa_smud_tall <- mpa_smud %>%
 
 ggplot(mpa_smud_tall %>% filter(source %in% c("tud_prop", "pud_prop"))) +
   geom_col(aes(x = reorder(Name_short, UD), y = UD, fill = source)) +
-  coord_flip() 
-
-
-
-# great. So now... how to get from smud to number of visitors and expenditures?
-
-## Need to find a SMUD to visitor ratio for each country
-# So, 
+  coord_flip()
 
 # ok, I need to know which country each pid falls into
 countries_aoi <- read_sf("~/Documents/MAR/GIS/Downscaling/CountriesplusTAOI_v3.shp")
@@ -147,21 +333,6 @@ countries_ud <- avg_ann_smud %>%
   summarise_at(vars(avg_ann_pud, avg_ann_tud, avg_ann_smud, smud_prop), sum) %>%
   filter(!is.na(country))
 
-# let's put it together to plot
-countries_ud_emp <- countries_ud %>% 
-  left_join(country_summaries, by = c("country" = "Country")) %>%
-  rename(avg_ann_smud2 = smud_prop) %>%
-  gather(key = "socmed", value = "avg_ann_ud", c(avg_ann_pud, avg_ann_tud, avg_ann_smud, avg_ann_smud2))
-
-# and, calculate the vis to avg_ann_ud ratio for each 
-countries_ratios <- countries_ud_emp %>%
-  mutate(ud_to_vis = vizinAOI/avg_ann_ud,
-         socmed = str_extract(socmed, "(?<=_)[:alnum:]*$")) %>%
-  dplyr::select(country, AvgExp, socmed, ud_to_vis)
-countries_ratios
-# Oof. Those are VERY different by country
-
-##### creating a shapefile that includes estimated visitation per grid cell using those viz ratios ####
 vis_per_cell <- avg_ann_smud %>% 
   left_join(countries_pid, by = "pid") %>%
   select(pid, smud2 = smud_prop, country) %>%
@@ -170,19 +341,16 @@ vis_per_cell <- avg_ann_smud %>%
          est_exp = round(est_vis*AvgExp)) %>%
   left_join(aoi, by = "pid")
 
-## write it out
-#write_sf(vis_per_cell, "~/Documents/MAR/ModelRuns/baseline_5k/aoi_viz_exp.shp")
-
-
 for(source in c("pud", "tud", "smud", "smud2")){
   plots <- ggplot(countries_ratios %>% filter(socmed == source)) +
-    geom_col(aes(x = country, y = ud_to_vis)) +
+    geom_col(aes(x = Country, y = ud_to_vis)) +
     labs(title = source)
   print(plots)
 }
-  
+
 plots
-##### Old #####
+
+################ Old ####
 # let's spread this data
 countries_ratios %>% select(country, socmed, ud_to_vis) %>%
   spread(key = "socmed", value = "ud_to_vis") %>%
@@ -207,9 +375,6 @@ smud_ratios <- countries_ratios %>%
 #(viz_to_pud <- mar_summary$Visitors/total_sm$avg_ann_pud)
 # and each avg_ann_pud is ~1000 visitors
 
-## so... let's calculate visitors and expenditures by mpa
-
-
 mpa_summaries_tall <- mpa_smud_tall %>%
   rename(socmed = source) %>%
   mutate(socmed = str_extract(socmed, ".*(?=_)")) %>%
@@ -217,9 +382,6 @@ mpa_summaries_tall <- mpa_smud_tall %>%
   mutate(visitors = UD*ud_to_vis,
          expenditures = visitors*AvgExp)
 mpa_summaries_tall
-
-# write it out
-#write_csv(mpa_summaries_tall, "~/Documents/MAR/ModelRuns/baseline_5k/viz_and_expends/mpa_summaries_tall.csv")
 
 
 #mpa_summaries #<- 
@@ -234,57 +396,6 @@ mpa_summaries
 ## write it out
 ## NOTE: this doesn't work now since I haven't recoded mpa_summaries to wide format with geometries
 #write_sf(mpa_summaries, "~/Documents/MAR/ModelRuns/baseline_5k/viz_and_expends/mpa_summaries.shp")
-
-############ Plotting MPA Summaries #########
-
-countrytp <- "Mexico"
-ggplot(mpa_summaries_tall %>% filter(socmed %in% c("smud2"), Country == countrytp)) +
-  geom_col(aes(x = reorder(Name_short, visitors), y = visitors), fill = "darkred", width = .7) +
-  coord_flip() +
-  xlab(NULL) +
-  ylab("Annual Visitors") +
-  labs(title = paste0("Estimated 2017 Visitation by MPA - ", countrytp)) +
-  theme_bw()
-
-#ggsave(paste0("~/Documents/MAR/Deliverables/August Workshop/figs/mpas_", countrytp, ".png"),
- #      width = 9, height = 7, units = "in", scale = .6)
-
-# let's see if we can add expenditure information in text at the end of the bars
-mpa_summaries_tall
-
-
-## plot all MPAs together
-ggplot(mpa_summaries_tall %>% filter(socmed %in% c("smud2"))) +
-  geom_col(aes(x = reorder(Name_short, visitors), y = visitors), fill = "darkred", width = .7) +
-  coord_flip() +
-  xlab(NULL) +
-  ylab("Annual Visitors") +
-  labs(title = paste0("Estimated 2017 Visitation by MPA")) +
-  theme_bw()
-
-# write it out
-#ggsave(paste0("~/Documents/MAR/Deliverables/August Workshop/figs/mpas_all.png"), width = 8, height = 8, units = "in")
-
-## plot all MPAs together, showing alternative social media combos
-ggplot(mpa_summaries_tall %>% filter(socmed %in% c("smud2", "smud", "pud"))) +
-  geom_col(aes(x = reorder(NAME, visitors), y = visitors, fill = socmed), position = "dodge", width = .7) +
-  coord_flip() +
-  xlab(NULL) +
-  ylab("Annual Visitors") +
-  labs(title = paste0("Estimated 2017 Visitation by MPA")) +
-  theme_bw()
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 ################ Old and other, supporting code #########
