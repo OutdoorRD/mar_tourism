@@ -16,7 +16,7 @@ library(ggspatial)
 countries <- read_sf("~/Documents/MAR/GIS/BordersandProtectedAreas/countries_MAR.shp")
 aoi_outline <- read_sf("~/Documents/MAR/GIS/AOI/AOI_v3/Tourism_AOI_v3.shp")
 mpas <- read_sf("~/Documents/MAR/GIS/BordersandProtectedAreas/MPA/MPA_Network_WGS84_4326.shp")
-vis_per_cell <- read_sf("~/Documents/MAR/ModelRuns/baseline_5k/aoi_viz_exp.shp")
+vis_per_cell <- read_sf("~/Documents/MAR/ModelRuns/baseline_5k_intersect/aoi_viz_exp.shp")
 cities <- read_sf("~/Documents/MAR/GIS/Predictors/Infrastructure/ne_10m_populated_places_simple_MAR.shp")
 
 # filter cities to be a few key ones along the coast
@@ -51,12 +51,15 @@ ggplot() +
 
 ###### And... making for individual countries ######
 ## first, let's read in my MPA buffer and then select only cells within it
-mpa_buffer <- read_sf("~/Documents/MAR/GIS/BordersandProtectedAreas/MPA/MPA_buffer.shp")
+#mpa_buffer <- read_sf("~/Documents/MAR/GIS/BordersandProtectedAreas/MPA/MPA_buffer.shp")
 
-vis_pc_mpas <- vis_per_cell %>% 
-  filter(lengths(st_within(vis_per_cell, mpa_buffer)) > 0)
+#vis_pc_mpas <- vis_per_cell %>% 
+#  filter(lengths(st_within(vis_per_cell, mpa_buffer)) > 0)
 # write it out
 #write_sf(vis_pc_mpas, "~/Documents/MAR/ModelRuns/baseline_5k/aoi_viz_exp_mpa_plus.shp")
+
+### UPDATE - with the intersected polys, I just need to select ones which have MPA names
+vis_pc_mpas <- vis_per_cell %>% filter(!is.na(MPA))
 
 # make a column which has cells categorized based on estimated vis
 vis_pc_groups <- vis_pc_mpas %>%
@@ -69,7 +72,7 @@ mpa_pts <- cbind(mpas, st_coordinates(st_centroid(mpas)))
 ## Mexico
 ggplot() +
   geom_sf(data = countries) +
-  geom_sf(data = vis_pc_groups %>% filter(country == "Mexico"),
+  geom_sf(data = vis_pc_groups %>% filter(Country == "Mexico"),
           aes(fill = vis_group)) +
   scale_fill_brewer(palette = "Greens",
                     name = "Annual Visitors",
@@ -77,7 +80,7 @@ ggplot() +
   #scale_fill_viridis_d("magma") +
   #scale_fill_gradient(breaks = c(10, 100, 1000, 10000, 100000, 500000),
    #                     labels = c("1-10", "10-100", "100-1,000", "1,000-10,000", "10,000 - 100,000", "100,000+")) +
-  geom_sf(data = mpas, fill = NA, col = "black", lwd = 1) +
+  geom_sf(data = mpas, fill = NA, col = "black", lwd = .5) +
  # geom_text(data = mpa_pts, aes(x =X, y=Y-.25, label = Name_short)) +
   geom_text(aes(x = c(-88.6, -87.95, -87.2, -87.2) , y = c(21.75, 21.8, 22, 21.1), 
                 label = c("Dzilam", "Ria Lagartos", "Tiburon Ballena", "Yum Balam"))) +
@@ -91,14 +94,14 @@ ggplot() +
   ylab(NULL) +
   theme_bw()
 
-#ggsave("~/Documents/MAR/Deliverables/August Workshop/figs/viz_map_mpas_Mexico_label.png",
- #      width = 8, height = 6, unit = "in")
+#ggsave("~/Documents/MAR/ModelRuns/baseline_5k_intersect/figs/viz_map_mpas_Mexico_label.png",
+ #     width = 8, height = 6, unit = "in")
 
 
 ## Honduras
 ggplot() +
   geom_sf(data = countries) +
-  geom_sf(data = vis_pc_groups %>% filter(country == "Honduras", !pid %in% c(1383:1384, 1467)),
+  geom_sf(data = vis_pc_groups %>% filter(Country == "Honduras", !pid %in% c(1383:1384, 1467)),
           aes(fill = vis_group)) +
   scale_fill_brewer(palette = "Greens",
                     name = "Annual Visitors",
@@ -106,7 +109,7 @@ ggplot() +
   #scale_fill_viridis_d("magma") +
   #scale_fill_gradient(breaks = c(10, 100, 1000, 10000, 100000, 500000),
   #                     labels = c("1-10", "10-100", "100-1,000", "1,000-10,000", "10,000 - 100,000", "100,000+")) +
-  geom_sf(data = mpas %>% filter(Country == "Honduras"), fill = NA, col = "black", lwd = 1) +
+  geom_sf(data = mpas %>% filter(Country == "Honduras"), fill = NA, col = "black", lwd = .5) +
   #geom_text(data = mpa_pts, aes(x =X, y=Y-.25, label = Name_short)) +
   geom_text(aes(x = c(-88.6, -87.95, -87.2, -87.2, 
                       -88.25, -88.2, -87.7, -87.6, -87.2, -86.5), 
@@ -122,20 +125,18 @@ ggplot() +
   ylab(NULL) +
   theme_bw()
 
-#ggsave("~/Documents/MAR/Deliverables/August Workshop/figs/viz_map_mpas_Honduras.png",
+#ggsave("~/Documents/MAR/ModelRuns/baseline_5k_intersect/figs/viz_map_mpas_Honduras.png",
  #     width = 8, height = 5, unit = "in")
 
 ## Guatemala
 ggplot() +
   geom_sf(data = countries) +
-  geom_sf(data = vis_pc_groups %>% filter(pid %in% c(540:1370), 
-                                          !pid %in% c(558:560, 638:640, 718:722, 802:804, 883:886, 968), 
-                                          country != "Honduras"),
+  geom_sf(data = vis_pc_groups %>% filter(Country == "Guatemala"),
           aes(fill = vis_group)) +
   scale_fill_brewer(palette = "Greens",
                     name = "Annual Visitors",
                     labels = c("0", "1-100", "100-1000", "1000-10,000", "10,000+")) +
- geom_sf(data = mpas %>% filter(Country == "Guatemala"), fill = NA, col = "black", lwd = 1) +
+ geom_sf(data = mpas %>% filter(Country == "Guatemala"), fill = NA, col = "black", lwd = .5) +
 #  geom_text(data = mpa_pts, aes(x =X, y=Y-.25, label = Name_short)) +
   coord_sf(xlim = c(-89.5, -88.2), ylim = c(15.25, 16.2), crs = 4326) +
   labs(title = "Estimated 2017 Visitation to Rio Sarstun") +
@@ -144,13 +145,13 @@ ggplot() +
   ylab(NULL) +
   theme_bw()
 
-#ggsave("~/Documents/MAR/Deliverables/August Workshop/figs/viz_map_mpas_Guatemala.png",
+#ggsave("~/Documents/MAR/ModelRuns/baseline_5k_intersect/figs/viz_map_mpas_Guatemala.png",
  #    width = 8, height = 6, unit = "in")
 
 ## Belize
 ggplot() +
   geom_sf(data = countries) +
-  geom_sf(data = vis_pc_groups %>% filter(country == "Belize", !pid %in% c(540:1370)),
+  geom_sf(data = vis_pc_groups %>% filter(Country == "Belize"),
           aes(fill = vis_group)) +
   scale_fill_brewer(palette = "Greens",
                     name = "Annual Visitors",
@@ -158,7 +159,7 @@ ggplot() +
   #scale_fill_viridis_d("magma") +
   #scale_fill_gradient(breaks = c(10, 100, 1000, 10000, 100000, 500000),
   #                     labels = c("1-10", "10-100", "100-1,000", "1,000-10,000", "10,000 - 100,000", "100,000+")) +
-  geom_sf(data = mpas %>% filter(Country == "Belize"), fill = NA, col = "black", lwd = 1) +
+  geom_sf(data = mpas %>% filter(Country == "Belize"), fill = NA, col = "black", lwd = .5) +
   geom_text(data = mpa_pts %>% filter(Country == "Belize", 
                                       !Name_short %in% c("Bacalar Chico", "Laughing Bird Caye",
                                                          "Sapodilla Cayes")), 
@@ -173,5 +174,5 @@ ggplot() +
   ylab(NULL) +
   theme_bw()
 
-ggsave("~/Documents/MAR/Deliverables/August Workshop/figs/viz_map_mpas_Belize.png",
+ggsave("~/Documents/MAR/ModelRuns/baseline_5k_intersect/figs/viz_map_mpas_Belize.png",
      width = 7, height = 9, unit = "in")

@@ -19,7 +19,8 @@ viz_2017 <- read_csv("~/Documents/MAR/Data/proportioned_viz_2017_AOIv3.csv")
 # Note that Honduras is from 2016, others are all 2017
 # Average expenditures are averaged between day trippers and overnight guests
 avg_exp <- tibble(Country = c("Mexico", "Honduras", "Guatemala", "Belize"),
-                  AvgExp = c(809, 572, 614, 854))
+                  AvgExp = c(130, 60, 81, 148),
+                  AvgExpTrip = c(809, 572, 614, 854))
 
 # Read in AOI and smud info
 aoi_smud <- read_sf("aoi_smud.shp")
@@ -130,10 +131,15 @@ mpa_comps <- mpa_summaries %>%
   left_join(MPA_emp_viz_sub)
 
 ggplot(mpa_comps %>% filter(socmed == "smud_prop")) +
-  geom_label(aes(x = Visitation, y = est_visitors, label = MPA_short, col = socmed)) +
-  geom_point(aes(x = Visitation, y = est_visitors), col = "blue") +
-  geom_abline(slope = 1)# +
-  facet_grid(rows = vars(socmed))
+  geom_label(aes(x = Visitation, y = est_visitors, label = MPA_short)) +
+ # geom_point(aes(x = Visitation, y = est_visitors), col = "blue") +
+  geom_abline(slope = 1) +
+  ylab("Estimated Annual Visitors (from social media)") +
+  xlab("Annual Visitors (from in-country sources)")# +
+  #facet_grid(rows = vars(socmed))
+
+# write it out  
+#ggsave("figs/mpas_smud_v_emp_scatterplot.png", width = 8, height = 6, units = "in")
 
 ggplot(mpa_comps %>% filter(Country == "Belize")) +
   geom_abline(slope = 1) +
@@ -155,7 +161,7 @@ mpa_comps %>%
 
 
 ############ Plotting MPA Summaries #########
-countrytp <- "Honduras"
+countrytp <- "Belize"
 ggplot(mpa_summaries %>% filter(Country == countrytp, socmed == "smud_prop")) +
   geom_col(aes(x = reorder(MPA_short, visitors), y = visitors), fill = "darkred", width = .7) +
   coord_flip() +
@@ -166,10 +172,10 @@ ggplot(mpa_summaries %>% filter(Country == countrytp, socmed == "smud_prop")) +
   theme_bw()
 
 #ggsave(paste0("figs/mpas_", countrytp, ".png"),
-#      width = 9, height = 7, units = "in", scale = .6)
+ #            width = 8, height = 9, units = "in", scale = .6)
 
 # let's see if we can add expenditure information in text at the end of the bars
-mpa_summaries_tall
+mpa_summaries %>% filter(Country == countrytp, socmed == "smud_prop")
 
 
 ## plot all MPAs together
