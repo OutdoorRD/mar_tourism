@@ -141,6 +141,20 @@ ggplot(mpa_comps %>% filter(socmed == "smud_prop")) +
 # write it out  
 #ggsave("figs/mpas_smud_v_emp_scatterplot.png", width = 8, height = 6, units = "in")
 
+# slightly cleaner, with and without Hol Chan
+ggplot(mpa_comps %>% filter(socmed == "smud_prop"))+#, MPA_short != "Hol Chan")) +
+  #geom_label(aes(x = Visitation, y = est_visitors, label = MPA_short)) +
+  geom_point(aes(y = Visitation, x = est_visitors, col = Country)) +
+  geom_abline(slope = 1) +
+  xlim(c(0, 40000)) +
+  xlab("Estimated Annual Visitors (from social media)") +
+  ylab("Annual Visitors (from in-country sources)") +
+  labs(title = "MPA Visitation - Survey-based vs. social media-based estimates") +
+  theme_classic()
+
+# write it out  
+ggsave("figs/mpas_smud_v_emp_scatterplot_2.png", width = 6, height = 4, units = "in")
+
 ggplot(mpa_comps %>% filter(Country == "Belize")) +
   geom_abline(slope = 1) +
   geom_point(aes(x = Visitation, y = est_visitors)) 
@@ -161,7 +175,7 @@ mpa_comps %>%
 
 
 ############ Plotting MPA Summaries #########
-countrytp <- "Belize"
+countrytp <- "Honduras"
 ggplot(mpa_summaries %>% filter(Country == countrytp, socmed == "smud_prop")) +
   geom_col(aes(x = reorder(MPA_short, visitors), y = visitors), fill = "darkred", width = .7) +
   coord_flip() +
@@ -175,7 +189,7 @@ ggplot(mpa_summaries %>% filter(Country == countrytp, socmed == "smud_prop")) +
  #            width = 8, height = 9, units = "in", scale = .6)
 
 # let's see if we can add expenditure information in text at the end of the bars
-mpa_summaries %>% filter(Country == countrytp, socmed == "smud_prop")
+mpa_summaries %>% filter(Country == countrytp, socmed == "smud_prop") %>% arrange(desc(visitors))
 
 
 ## plot all MPAs together
