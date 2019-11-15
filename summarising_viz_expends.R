@@ -153,7 +153,7 @@ ggplot(mpa_comps %>% filter(socmed == "smud_prop"))+#, MPA_short != "Hol Chan"))
   theme_classic()
 
 # write it out  
-ggsave("figs/mpas_smud_v_emp_scatterplot_2.png", width = 6, height = 4, units = "in")
+#ggsave("figs/mpas_smud_v_emp_scatterplot_2.png", width = 6, height = 4, units = "in")
 
 ggplot(mpa_comps %>% filter(Country == "Belize")) +
   geom_abline(slope = 1) +
@@ -186,7 +186,7 @@ ggplot(mpa_summaries %>% filter(Country == countrytp, socmed == "smud_prop")) +
   theme_bw()
 
 #ggsave(paste0("figs/mpas_", countrytp, ".png"),
- #            width = 8, height = 9, units = "in", scale = .6)
+ #            width = 9, height = 9, units = "in", scale = .6)
 
 # let's see if we can add expenditure information in text at the end of the bars
 mpa_summaries %>% filter(Country == countrytp, socmed == "smud_prop") %>% arrange(desc(visitors))

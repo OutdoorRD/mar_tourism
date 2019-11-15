@@ -88,6 +88,16 @@ ggplot(lin3_test, aes(x = test, y = VisAvg)) +
   geom_abline(slope = 1) +
   geom_point(aes(x = (.19*PUD + 1.01*TUD)*100), col = "green")
 
+## Make this a nicer figure for presentation
+ggplot(lin3_test, aes(x = test, y = VisAvg)) + 
+  geom_point() +
+  geom_abline(slope = 1) +
+  xlab("Estimated Annual Visitation (Social Media-based)") +
+  ylab("Annual Visitation (Survey-based)") +
+  labs(title = "Belize District-level Visitation")
+
+#ggsave("belize_districts_socmed_v_surveys.png", width = 6, height = 5, units = "in")
+
 
 ##### And... let's try briefly if I first scale TUD and PUD to each be proportions, and then add them up
 # In theory, this should give equal weight to each
