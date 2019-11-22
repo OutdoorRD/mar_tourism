@@ -138,6 +138,14 @@ predictors4 <- predictors3 %>%
 #write_csv(predictors4 %>% st_set_geometry(NULL), "CombinedPredictors_111419_PARTIAL.csv")
 
 
+### TODO:
+# wildlife2.shp (already in baseline_predictors)
+# access (roads, airports, ports)
+# ruins
+# hurricanes (in baseline preds as windset_prob_stats_prob_exceed_C3.shp. Use C3P column)
+# sargassum
+
+
 
 
 
