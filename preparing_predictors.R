@@ -145,6 +145,31 @@ predictors4 <- predictors3 %>%
 # hurricanes (in baseline preds as windset_prob_stats_prob_exceed_C3.shp. Use C3P column)
 # sargassum
 
+# read it in
+predictors4 <- read_sf("CombinedPredictors_111419_PARTIAL.shp")
+
+# and continue
+## Wildlife
+
+wildlife <- read_sf("wildlife2.shp")
+st_crs(wildlife)
+wildlife_valid <- st_make_valid(wildlife)
+
+aoi_nad27 <- st_transform(aoi, crs = st_crs(wildlife_valid))
+aoi_nad27 <- st_make_valid(aoi_nad27)
+
+ggplot() +
+  geom_sf(data = aoi_nad27) +
+  geom_sf(data = wildlife_valid)
+
+# intersect
+wild_int <- st_intersection(aoi_nad27, wildlife_valid)
+wild_pid <- wild_int$pid
+
+predictors5 <- predictors4 %>%
+  mutate(wildlife = if_else(pid %in% wild_pid, 1, 0))
+
+ggplot(predictors5) + geom_sf(aes(fill = wildlife))
 
 
 
@@ -164,11 +189,11 @@ plot(density(pred_small$smud_prop))
 
 corrgram(pred_small, lower.panel = panel.cor, upper.panel = panel.pts)
 # precipitation and days of rain are highly correlated. Will need to choose just one to include
-mod1 <- lm(vis_log ~ corals + mangroves + beach + temp + dayshot + precip + daysrain + protected, 
+mod1 <- lm(vis_log ~ corals + mangroves + beach + temp + I(temp^2) + dayshot + precip + daysrain + protected + prop_land, 
            data = pred_small)
 summary(mod1)
 #plot(mod1)
 
-mod2 <- MASS::glm.nb(round(est_vis) ~ corals + mangroves + beach + temp + dayshot + precip + daysrain + protected, 
+mod2 <- MASS::glm.nb(round(est_vis) ~ corals + mangroves + beach + temp + I(temp^2) + dayshot + precip + daysrain + protected + prop_land, 
                      data = pred_small)
 summary(mod2)
