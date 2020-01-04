@@ -171,6 +171,89 @@ predictors5 <- predictors4 %>%
 
 ggplot(predictors5) + geom_sf(aes(fill = wildlife))
 
+### Hurricanes
+hurricanes <- read_sf("windset_prob_stats_prob_exceed_C3.shp")
+plot(hurricanes)
+
+# just guessing what the crs is... I htink wgs84 is approp for latlong?
+hurricanes_proj <- st_set_crs(hurricanes, value = st_crs(aoi))
+
+# let's do the same as I did for the climate data, and just look at what the
+# probability of a C3 hurricane is at the centroid of the tourism hexes
+
+aoi_centers <- st_centroid(aoi)
+
+hurricanes_int <- st_intersection(aoi_centers, hurricanes_proj)
+
+predictors6 <- predictors5 %>%
+  left_join(hurricanes_int %>% 
+              st_set_geometry(NULL) %>%
+              dplyr::select(pid, C3P), by = "pid") 
+
+### Airports
+airports <- st_read("airports_MAR.shp")
+
+# for now, only including major and mid aiports
+airports_maj <- airports %>% 
+  filter(type %in% c("major", "mid")) %>%
+  dplyr::select(type, name, abbrev)
+
+# now I want to calculate the distance from the nearest airport for the entire aoi
+air_dists <- st_distance(aoi, airports_maj)
+air_min_dist <- apply(air_dists, 1, min)
+
+predictors6$air_min_dist <- air_min_dist
+
+#ggplot(predictors6) +
+ # geom_sf(aes(fill = air_min_dist))
+
+### Ports
+ports <- read_sf("ports_MAR_2.shp")
+
+ports_dists <- st_distance(aoi, ports)
+ports_min_dist <- apply(ports_dists, 1, min)
+
+predictors6$ports_min_dist <- ports_min_dist
+
+#ggplot(predictors6) +
+ # geom_sf(aes(fill = ports_min_dist))
+
+#### Roads - NEED TO DO!!
+roads <- read_sf("roads_MAR.shp")
+
+roads_dists <- st_distance(aoi, roads) # too slow (>147 min)
+
+roads_min_dist <- apply(roads_dists, 1, min)
+
+predictors6$roads_min_dist <- roads_min_dist
+
+#### Ruins - not yet run
+ruins <- st_read("archaeological_sites_combined.shp")
+
+# intersect
+ruins_int <- st_intersection(aoi, ruins)
+ruins_pid <- ruins_int$pid
+
+predictors7 <- predictors6 %>%
+  mutate(ruins = if_else(pid %in% ruins_pid, 1, 0))
+
+#### Sargassum
+# just intersect with presence records for now
+sargassum <- st_read("sargassum_oceancleaner_present.shp")
+# intersect
+sarg_int <- st_intersection(aoi, sargassum)
+sarg_pid <- sarg_int$pid
+
+predictors8 <- predictors7 %>%
+  mutate(sargassum = if_else(pid %in% sarg_pid, 1, 0))
+
+### write it out
+st_write(predictors8, "CombinedPredictors_010320_PARTIAL.shp")
+
+# and as a csv
+write_csv(predictors8 %>% st_set_geometry(NULL), "CombinedPredictors_010320_PARTIAL.csv")
+
+
 
 
 
