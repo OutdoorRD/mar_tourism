@@ -43,7 +43,7 @@ barrier_pid <- barrier_int$pid
 predictors <- aoi_nad83 %>% 
   mutate(corals = if_else(pid %in% c(coral_pids, barrier_pid), 1, 0))
 
-ggplot(predictors) + geom_sf(aes(fill = corals))
+#ggplot(predictors) + geom_sf(aes(fill = corals))
 
 ##### Mangroves
 mangroves <- read_sf("Mangroves_2.shp")
@@ -249,7 +249,7 @@ predictors8 <- predictors7 %>%
 predictors8 <- read_sf("CombinedPredictors_010320_PARTIAL.shp")
 
 
-#### Roads - NEED TO DO!!
+#### Roads 
 roads <- read_sf("roads_MAR_clip.shp")
 
 roads_dists <- st_distance(aoi, roads) # too slow (>147 min)
@@ -294,6 +294,19 @@ predictors9 <- predictors8 %>%
               dplyr::select(pid, roads_min_dist_adj), by = "pid") %>%
   mutate(roads_min_dist = if_else(pid %in% roads_polys$pid, 0, roads_min_dist_adj)) %>%
   dplyr::select(-roads_min_dist_adj)
+
+## rename with full names (not the shortened .shp ones which came in with predictors8)
+
+predictors9 <- predictors9 %>%
+  rename(ud_to_vis = ud_t_vs,
+         mangroves = mangrvs,
+         daysrain = daysran,
+         protected = protctd,
+         prop_land = prp_lnd,
+         wildlife = wildlif,
+         air_min_dist = ar_mn_d,
+         ports_min_dist = prts_m_,
+         sargassum = sargssm)
 
 # write it out
 st_write(predictors9, "CombinedPredictors_010920.shp")
