@@ -311,29 +311,8 @@ predictors9 <- predictors9 %>%
 # write it out
 st_write(predictors9, "CombinedPredictors_010920.shp")
 st_write(predictors9, "CombinedPredictors_010920.geojson")
+# let's write it to a trackable location as well
+write_csv(predictors9 %>% st_set_geometry(NULL), "../../../mar_tourism/CombinedPredictors_010920.csv")
 write_csv(predictors9 %>% st_set_geometry(NULL), "CombinedPredictors_010920.csv" )
 
 
-
-
-# create a non-spatially explicit one to look at corrgram
-pred_small <- predictors4 %>% 
-  st_set_geometry(NULL) %>%
-  dplyr::select(vis_log, est_vis, smud_prop, corals, mangroves, beach, temp, dayshot, 
-                precip, daysrain, protected, prop_land)
-
-summary(pred_small)
-plot(density(pred_small$est_vis, na.rm = TRUE))
-plot(density(pred_small$vis_log, na.rm = TRUE))
-plot(density(pred_small$smud_prop))
-
-corrgram(pred_small, lower.panel = panel.cor, upper.panel = panel.pts)
-# precipitation and days of rain are highly correlated. Will need to choose just one to include
-mod1 <- lm(vis_log ~ corals + mangroves + beach + temp + I(temp^2) + dayshot + precip + daysrain + protected + prop_land, 
-           data = pred_small)
-summary(mod1)
-#plot(mod1)
-
-mod2 <- MASS::glm.nb(round(est_vis) ~ corals + mangroves + beach + temp + I(temp^2) + dayshot + precip + daysrain + protected + prop_land, 
-                     data = pred_small)
-summary(mod2)
