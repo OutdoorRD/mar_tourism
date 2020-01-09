@@ -218,16 +218,7 @@ predictors6$ports_min_dist <- ports_min_dist
 #ggplot(predictors6) +
  # geom_sf(aes(fill = ports_min_dist))
 
-#### Roads - NEED TO DO!!
-roads <- read_sf("roads_MAR.shp")
-
-roads_dists <- st_distance(aoi, roads) # too slow (>147 min)
-
-roads_min_dist <- apply(roads_dists, 1, min)
-
-predictors6$roads_min_dist <- roads_min_dist
-
-#### Ruins - not yet run
+#### Ruins 
 ruins <- st_read("archaeological_sites_combined.shp")
 
 # intersect
@@ -248,13 +239,66 @@ predictors8 <- predictors7 %>%
   mutate(sargassum = if_else(pid %in% sarg_pid, 1, 0))
 
 ### write it out
-st_write(predictors8, "CombinedPredictors_010320_PARTIAL.shp")
+#st_write(predictors8, "CombinedPredictors_010320_PARTIAL.shp")
 
 # and as a csv
-write_csv(predictors8 %>% st_set_geometry(NULL), "CombinedPredictors_010320_PARTIAL.csv")
+#write_csv(predictors8 %>% st_set_geometry(NULL), "CombinedPredictors_010320_PARTIAL.csv")
+
+##################################################3
+#### Read it in
+predictors8 <- read_sf("CombinedPredictors_010320_PARTIAL.shp")
 
 
+#### Roads - NEED TO DO!!
+roads <- read_sf("roads_MAR_clip.shp")
 
+roads_dists <- st_distance(aoi, roads) # too slow (>147 min)
+
+# what about if i run an intersection (to find hexes with roads in them),
+# then calculate distance from those hexes to all others?
+roads_int <- st_intersection(aoi, roads) # that was quicker
+#ggplot(roads_int) + geom_sf()
+
+roads_polys <- aoi %>% filter(pid %in% roads_int$pid)
+#ggplot(roads_polys) + geom_sf()
+
+# let's pull out just hexes that don't have roads in them to run the dists on
+no_rds_polys <- aoi %>% filter(!pid %in% roads_int$pid)
+
+#### Stopped here on 1/6
+roads_dists <- st_distance(no_rds_polys, roads_polys) # started 4:30pm
+
+
+roads_min_dist <- apply(roads_dists, 1, min)
+
+no_rds_polys$roads_min_dist <- roads_min_dist
+
+ggplot(no_rds_polys) +
+  geom_sf(aes(fill = roads_min_dist))
+
+# let's write that one out
+st_write(no_rds_polys, "Roads_intermediates/no_roads_dists.shp")
+
+# so right now, the polygons which are adjacent to road polygons are getting a zero
+# And the ones which are one away are getting a value of 2667 meters, which is the length
+# of one side of my hexes (except for the smaller ones which are intersected with borders)
+
+# So, I want the hexes with roads in them to be zeros, and all others to be slightly more
+# Let's add 1000 meters to all values. This isn't perfect, but should work
+
+no_rds_polys$roads_min_dist_adj <- no_rds_polys$roads_min_dist + 1000
+
+predictors9 <- predictors8 %>%
+  left_join(no_rds_polys %>% 
+              st_set_geometry(NULL) %>%
+              dplyr::select(pid, roads_min_dist_adj), by = "pid") %>%
+  mutate(roads_min_dist = if_else(pid %in% roads_polys$pid, 0, roads_min_dist_adj)) %>%
+  dplyr::select(-roads_min_dist_adj)
+
+# write it out
+st_write(predictors9, "CombinedPredictors_010920.shp")
+st_write(predictors9, "CombinedPredictors_010920.geojson")
+write_csv(predictors9 %>% st_set_geometry(NULL), "CombinedPredictors_010920.csv" )
 
 
 
