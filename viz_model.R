@@ -102,7 +102,7 @@ pred_scaled$fitted <- fitted.values(mod4)
 #write_csv(pred_scaled, "../../../ModelRuns/baseline_5k_intersect/modeling/mod4_010920.csv")
 
 # Let's use mod4 as our best model for now, and make a coefplot for it
-coefplot(mod4)
+coefplot(mod4, decreasing = TRUE)
 
 ### And... to try to get the negbin model to fit, let's get starting values from a poisson
 mod4pois <- glm(round(est_vis)~ as.factor(Country) + corals + mangroves + beach + temp + I(temp^2) + 
@@ -180,3 +180,27 @@ plot(hist(pred_scaled$roads_min_dist))
 plot(est_vis ~ roads_min_dist, data = pred_scaled)
 plot(vis_log ~ log1p(roads_min_dist), data = pred_scaled)
 plot(hist(log1p(pred_scaled$roads_min_dist)))
+
+# How about a bayesian negbin model?
+library(rstanarm)
+options(mc.cores = parallel::detectCores())
+mod_nb_bayes <- stan_glm.nb(round(est_vis)~ as.factor(Country) + corals + mangroves + beach + temp + I(temp^2) + 
+              dayshot + precip + prop_land + wildlife +
+              C3P + air_min_dist + ports_min_dist + ruins + sargassum + roads_min_dist, 
+            data = pred_scaled)
+# started at 1:00, ended 1:15 (with 4 cores)
+
+summary(mod_nb_bayes)
+launch_shinystan(mod_nb_bayes)
+# convergence looks pretty good. Really actually happy with all the trace plots
+
+plot(mod_nb_bayes)
+# some interesting differences from mod4 (linear)
+
+pp_validate(mod_nb_bayes)
+
+# does this work?
+r2 <- bayes_R2(mod_nb_bayes)
+plot(density(r2))
+# made something... maybe telling me that r2 ~= .54? If so, this is better than the lin mod
+
