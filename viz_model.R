@@ -204,3 +204,14 @@ r2 <- bayes_R2(mod_nb_bayes)
 plot(density(r2))
 # made something... maybe telling me that r2 ~= .54? If so, this is better than the lin mod
 
+# make data of fitted values and resids
+mod_bayes_nums <- pred_scaled
+mod_bayes_nums$fitted <- fitted(mod_nb_bayes)
+mod_bayes_nums$resids <- residuals(mod_nb_bayes)
+
+# write it out
+#write_csv(mod_bayes_nums, "../../../ModelRuns/baseline_5k_intersect/modeling/modbayes_020320.csv")
+
+# let's save the model object too
+#write_rds(mod_nb_bayes, "../../../ModelRuns/baseline_5k_intersect/modeling/mod_nb_bayes_020320.rds")
+
