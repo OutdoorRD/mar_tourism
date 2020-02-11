@@ -315,4 +315,83 @@ st_write(predictors9, "CombinedPredictors_010920.geojson")
 write_csv(predictors9 %>% st_set_geometry(NULL), "../../../mar_tourism/CombinedPredictors_010920.csv")
 write_csv(predictors9 %>% st_set_geometry(NULL), "CombinedPredictors_010920.csv" )
 
+predictors9 <- st_read("CombinedPredictors_010920.geojson")
 
+######## Using WorldPop as a proxy for development for now (2/11/20) #######
+
+# Note that the units/values in the layer shared by Jess/Stacie seem wonky
+# Generally they are almost all <3, but a few pixels in Mexico are up to 571
+## The general documentation online suggest that they are meant to be 
+##   ppl/100 m2, but this doesn't seem to match well.
+
+## However, the data in the file that stacie created do match the Mexico data
+##   when I download them myself. So I think it is meant to be ppl/100m2, but
+##   that there may just be some errors created by the data "spreading" method.
+##  Though, honestly, they may match my spread viz data fairly well
+
+## I want to truncate the data, and assign all the values < 10?? to be the cutoff
+## Then I should add up the values inside each of my hexes to get a value
+
+worldpop <- raster("WorldPop_2019_tourism.tif")
+worldpop <- setMinMax(worldpop)
+
+# let's assign each cell to a tourism hex (creates a df ordered according to aoi)
+worldaoi <- extract(worldpop, aoi, df = TRUE) ## grr, threw an error after an hour
+
+# instead, how about those points
+worldpoints <- rasterToPoints(worldpop, spatial = TRUE)
+worldsf <- st_as_sf(worldpoints) # started 1:11
+
+summary(worldsf)
+
+#write it out
+#write_sf(worldsf, "WorldPop_intermediates/worldpoints.shp") # 2:31
+
+# let's intersect
+testpts <- st_as_sf(rasterToPoints(test, spatial = TRUE))
+worldcrs <- st_crs(testpts)
+aoi_reproj <- st_transform(aoi, worldcrs) %>% dplyr::select(pid, geometry)
+
+world_int <- st_intersection(worldsf, aoi_reproj) # started 2:42, ended 2:50
+world_pid <- world_int %>% 
+  st_set_geometry(NULL) %>%
+  rename(population = WorldPop_2019_tourism)
+
+# write it out
+#write_csv(world_pid, "WorldPop_intermediates/population_by_point_pid.csv")
+
+# Ok. And... summarise (for now wihtout truncating)
+pop_by_pid <- world_pid %>%
+  group_by(pid) %>%
+  summarise(WorldPop = sum(population))
+
+# write it out
+#write_csv(pop_by_pid, "WorldPop_intermediates/pop_by_pid_summed.csv")
+
+# let's check it out spatially again
+aoi_pop <- aoi %>% left_join(pop_by_pid, by = "pid")
+
+#ggplot() + geom_sf(data = aoi_pop, aes(fill = WorldPop))
+# great
+
+# write it out
+#st_write(aoi_pop, "WorldPop_intermediates/pop_by_pid_summed_NAs.shp")
+
+# and creat one where ocean gets 0s
+aoi_pop_0 <- aoi_pop %>%
+  replace_na(list(WorldPop = 0))
+
+# write it out
+#st_write(aoi_pop_0, "WorldPop_intermediates/pop_by_pid_summed_0s.shp")
+
+# Ok. Now for actually getting it onto the predictors shp and csv
+predictors10 <- predictors9 %>% 
+  left_join(pop_by_pid, by = "pid") %>%
+  replace_na(list(WorldPop = 0))
+
+# write it out
+st_write(predictors10, "CombinedPredictors_021120.shp")
+st_write(predictors10, "CombinedPredictors_021120.geojson")
+# let's write it to a trackable location as well
+write_csv(predictors10 %>% st_set_geometry(NULL), "../../../mar_tourism/CombinedPredictors_021120.csv")
+write_csv(predictors10 %>% st_set_geometry(NULL), "CombinedPredictors_021120.csv" )
