@@ -45,6 +45,26 @@ predictors <- aoi_nad83 %>%
 
 #ggplot(predictors) + geom_sf(aes(fill = corals))
 
+# let's also recombine them and export for Invest
+corals_sm <- coral %>% 
+  mutate(type = "coral") %>%
+  dplyr::select(type, geometry) %>%
+  st_cast("POLYGON") 
+
+barriers_sm <- barriers %>% 
+  mutate(type = "barrier") %>%
+  dplyr::select(type, geometry)
+
+corals_all <- rbind(corals_sm, barriers_sm)
+corals_32616 <- st_transform(corals_all, crs = 32616)
+
+#ggplot(corals_all) +geom_sf()
+
+# write it out
+#st_write(corals_all, "corals_all.shp")
+#st_write(corals_32616, "ProjectedForInvest/corals_all_32616.shp")
+
+
 ##### Mangroves
 mangroves <- read_sf("Mangroves_2.shp")
 mangroves_valid <- st_make_valid(mangroves)
