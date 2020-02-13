@@ -6,28 +6,43 @@
 # Read file
 
 library(sf)
+library(lwgeom) # for st_make_valid()
 library(raster)
+library(fasterize)
+library(tidyverse)
 
 setwd("~/Documents/MAR/GIS/Predictors/Baseline_Inputs/")
 
 # create list of files to transform
-shpfiles <- c("airports_MAR", "archaeological_sites_combined", "BarrierReef_5",
-  "beach_from_geomorph_MAR_v4_shift_BZ_MX", "Corals_1",
-  #"landmass_adjusted_clipped_shift_BZ_MX.shp", 
-  #"Mangroves_2",
+shpfiles <- c("airports_MAR", "archaeological_sites_combined",
+  "beach_from_geomorph_MAR_v4_shift_BZ_MX", "corals_all",
+  "landmass_adjusted_clipped_shift_BZ_MX", 
+  "Mangroves_2",
   "ports_MAR_2", "roads_MAR_clip", 
-  #"sargassum_oceancleaner_present",
-  #"windset_prob_stats_prob_exceed_C3",
+  "sargassum_oceancleaner_present",
+  "windset_prob_stats_prob_exceed_C3",
   "wildlife2")
+
+#file1 <- st_read("airports_MAR.shp")
+#all(st_is_valid(file1)) == FALSE
+#if (all(st_is_valid(file1)) == FALSE) {
+#  file1 <- st_make_valid(file1)
+#}
 
 for(shpfile in shpfiles){
   file1 <- st_read(paste0(shpfile, ".shp"))
-  trans <- st_transform(file1, crs = 32616)
-  st_write(trans, paste0("ProjectedForInvest/", shpfile, "_32616.shp"), delete_layer = TRUE)
+  flat <- st_zm(file1)
+  if (all(st_is_valid(flat)) == FALSE) {
+    flat <- st_make_valid(flat)
+  }
+  trans <- st_transform(flat, crs = 32616)
+  st_write(trans, paste0("ProjectedForInvestValid/", shpfile, "_32616.shp"), delete_layer = TRUE)
 }
 
 # getting some errors. Especially for those that have been commented out above
-# Working through them in QGIS. So far: land, mangroves, sargassum, C3
+# Working through them in QGIS. So far: land (fixed), mangroves (fixed), sargassum (fixed), C3
+# Let's try them manually here
+
 
 # and the same for tiffs
 tiffs <- c(#"MaxTempDaysAbove35C_BASELINE", 
@@ -42,6 +57,17 @@ for(tiff1 in tiffs){
 }
 
 # only worked for worldpop. Did the others in Qgis. Maxtemp, meantemp, precip
+
+# and actually, what C3 needs is to be converted into a raster. So, let's try it
+shpfile <- "windset_prob_stats_prob_exceed_C3"
+file1 <- st_read(paste0(shpfile, ".shp"))
+trans <- st_set_crs(file1, value = 32616)
+
+trans_r <- raster(trans, res = .01)
+c3_r <- fasterize(trans, trans_r, field = "C3P")
+trans <- projectRaster(c3_r, crs = longproj)
+#plot(test)
+writeRaster(c3_r, paste0("ProjectedForInvestValid/", shpfile, "_32616.tif"), overwrite = TRUE)
 
 # And finally, for my aoi
 aoi_pid <- st_read("../../../ModelRuns/baseline_5k_intersect/T_AOI_intersected_pid.shp")
