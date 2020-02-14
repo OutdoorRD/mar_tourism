@@ -30,17 +30,19 @@ pred_small <- predictors %>%
   filter(!is.na(est_vis)) %>%
   dplyr::select(pid, vis_log, est_vis, Country, corals, mangroves, beach, temp, dayshot,
          precip, daysrain, protected, prop_land, wildlife, C3P,
-         air_min_dist, ports_min_dist, ruins, sargassum, roads_min_dist, WorldPop)
+         air_min_dist, ports_min_dist, ruins, sargassum, roads_min_dist, WorldPop) %>%
+  mutate(logWorldPop = log1p(WorldPop))
 
 corrgram(pred_small, diag.panel = panel.density, lower.panel = panel.cor, upper.panel = panel.pts)
 
 # precipitation and days of rain are highly correlated. Will need to choose just one to include
 mod1 <- lm(vis_log ~ Country + corals + mangroves + beach + temp + I(temp^2) + 
              dayshot + precip + protected + prop_land + wildlife +
-             C3P + air_min_dist + ports_min_dist + ruins + sargassum + roads_min_dist + WorldPop, 
+             C3P + air_min_dist + ports_min_dist + ruins + sargassum + roads_min_dist + log1p(WorldPop), 
            data = pred_small)
 summary(mod1)
-# only R2 = .38. Adding WorldPop helps, but still only .41
+# only R2 = .38. Adding WorldPop helps, but still only .41.
+# Taking the log of worldpop bumps it to .45
 modplot(mod1)
 # not great, but not as terrible as they could be...
 
@@ -54,10 +56,12 @@ summary(mod2)
 ## Removing "protected"
 mod3 <- lm(vis_log ~ Country + corals + mangroves + beach + temp + I(temp^2) + 
              dayshot + precip + prop_land + wildlife +
-             C3P + air_min_dist + ports_min_dist + ruins + sargassum + roads_min_dist + WorldPop, 
+             I(C3P*100) + air_min_dist + ports_min_dist + ruins + sargassum + 
+             roads_min_dist + log1p(WorldPop), 
            data = pred_small)
 summary(mod3)
 modplot(mod3)
+coefplot(mod3) + xlim(c(-5,5))
 
 mod3a <- MASS::glm.nb(round(est_vis)~ Country + corals + mangroves + beach + temp + I(temp^2) + 
                         dayshot + precip + prop_land + wildlife +
@@ -65,7 +69,7 @@ mod3a <- MASS::glm.nb(round(est_vis)~ Country + corals + mangroves + beach + tem
                       data = pred_small)
 
 # does it work if I drop all NAs? And rescale to get everything 0-1?
-scale_func <- function(x) (x - min(x))/max(x - min(x))
+scale_func <- function(x) (x - min(x))/(max(x) - min(x))
 pred_scaled <- pred_small %>% 
   filter(!is.na(est_vis) & !is.na(temp)) %>%
   mutate(temp = scale_func(temp),
@@ -76,26 +80,32 @@ pred_scaled <- pred_small %>%
          air_min_dist = scale_func(air_min_dist),
          ports_min_dist = scale_func(ports_min_dist),
          roads_min_dist = scale_func(roads_min_dist),
-         WorldPop = scale_func(WorldPop))
+         WorldPop = scale_func(WorldPop),
+         logWorldPop_sc = scale_func(log1p(WorldPop)),
+         logWorldPop_ns = log1p(WorldPop))
 summary(pred_scaled)
 
 
 mod3a <- MASS::glm.nb(round(est_vis)~ as.factor(Country) + corals + mangroves + beach + temp + I(temp^2) + 
                         dayshot + precip + prop_land + wildlife +
-                        C3P + air_min_dist + ports_min_dist + ruins + sargassum + roads_min_dist + WorldPop, 
+                        C3P + air_min_dist + ports_min_dist + ruins + sargassum + roads_min_dist + logWorldPop, 
                       data = pred_scaled)
+
 # still no on this one.
 
 # how does the lm look with scaled values?
 mod4 <- lm(vis_log ~ Country + corals + mangroves + beach + temp + I(temp^2) + 
              dayshot + precip + prop_land + wildlife +
-             C3P + air_min_dist + ports_min_dist + ruins + sargassum + roads_min_dist + WorldPop, 
+             C3P + air_min_dist + ports_min_dist + ruins + sargassum + 
+             roads_min_dist + logWorldPop_ns, 
            data = pred_scaled)
 summary(mod4)
 # samesies, but now with comparable estimates
+## Actually, different with the scaled vs unscaled log(worldpop). Better not scaled
+##  But still bad if I do everything else scaled, except log(worldpop). Why?
 modplot(mod4)
 # not as bad as I imagined (though adding worldpop actualy makes it worse)
-residuals(mod4)
+#residuals(mod4)
 
 # I want to look at these spatially, so I'm going to write them out
 pred_scaled$resids <- residuals(mod4)
@@ -105,6 +115,9 @@ pred_scaled$fitted <- fitted.values(mod4)
 # Let's use mod4 as our best model for now, and make a coefplot for it
 coefplot(mod4, decreasing = TRUE)
 # ha. worldpop
+
+corrgram(pred_scaled, upper.panel = panel.pts, diag.panel = panel.density, lower.panel = panel.cor)
+#corrgram(pred_small, upper.panel = panel.pts)
 
 ### And... to try to get the negbin model to fit, let's get starting values from a poisson
 mod4pois <- glm(round(est_vis)~ as.factor(Country) + corals + mangroves + beach + temp + I(temp^2) + 
@@ -188,7 +201,8 @@ library(rstanarm)
 options(mc.cores = parallel::detectCores())
 mod_nb_bayes <- stan_glm.nb(round(est_vis)~ as.factor(Country) + corals + mangroves + beach + temp + I(temp^2) + 
               dayshot + precip + prop_land + wildlife +
-              C3P + air_min_dist + ports_min_dist + ruins + sargassum + roads_min_dist + WorldPop, 
+              C3P + air_min_dist + ports_min_dist + ruins + sargassum + 
+                roads_min_dist + WorldPop, 
             data = pred_scaled)
 # started at 1:00, ended 1:15 (with 4 cores) (w/o worldpop)
 # started at 3:28, ended at 3:41, (w/ worldpop)
@@ -222,3 +236,14 @@ mod_bayes_nums$resids <- residuals(mod_nb_bayes)
 plot(predictors$est_vis ~ predictors$WorldPop) 
 abline(a = 0, b = 1)
 
+
+#### Let's do it on the non-scaled predictors (since this seems btter with logWorldPop)
+mod_nb_bayes_ns <- stan_glm.nb(round(est_vis)~ as.factor(Country) + corals + mangroves + beach + temp + I(temp^2) + 
+                              dayshot + precip + prop_land + wildlife +
+                              C3P + air_min_dist + ports_min_dist + ruins + sargassum + 
+                              roads_min_dist + log1p(WorldPop), 
+                            data = pred_small)
+# started at 9:06
+
+summary(mod_nb_bayes_ns)
+launch_shinystan(mod_nb_bayes_ns)

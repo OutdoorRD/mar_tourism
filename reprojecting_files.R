@@ -72,5 +72,12 @@ writeRaster(c3_r, paste0("ProjectedForInvestValid/", shpfile, "_32616.tif"), ove
 # And finally, for my aoi
 aoi_pid <- st_read("../../../ModelRuns/baseline_5k_intersect/T_AOI_intersected_pid.shp")
 aoi_trans <- st_transform(aoi_pid, crs = 32616)
-st_write(aoi_trans, "ProjectedForInvest/T_AOI_intersected_pid_32616.shp")
+
+# let's drop that NA field while i'm at it
+summary(aoi_trans)
+
+aoi2 <- aoi_trans %>%
+  filter(!is.na(FID))
+
+st_write(aoi2, "ProjectedForInvestValid/T_AOI_intersected_pid_32616.shp", delete_layer = TRUE)
 
