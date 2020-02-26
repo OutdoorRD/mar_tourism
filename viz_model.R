@@ -130,14 +130,16 @@ corrgram(pred_scaled, upper.panel = panel.pts, diag.panel = panel.density, lower
 # Also maybe drop country?
 mod5 <- lm(vis_log ~ corals + mangroves + beach + temp + I(temp^2) + 
              dayshot + precip  + wildlife + prop_land +
-             C3P + air_min_dist + ports_min_dist + ruins + sargassum + 
-            roads_min_dist +  prop_dev, 
+             C3P + air_min_dist  + ruins + sargassum + 
+            roads_min_dist +  I(prop_dev>0), 
            data = pred_scaled)
 summary(mod5)
+modplot(mod5)
 # hmm. roads_min_dist seems pretty important (.43 to .40)
 # dropping land seems ok (.43 to .42), except that it makes dayshot and precip insig. I wonder if I should have an interaction with precip?
 ##  Definitely the climate data was not as good offshore
 # Country also important - .43 to .408
+## Turning Developed into a binary helps (.408 to .426)
 
 
 ###################################################

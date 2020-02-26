@@ -228,7 +228,7 @@ predictors6$air_min_dist <- air_min_dist
  # geom_sf(aes(fill = air_min_dist))
 
 ### Ports
-ports <- read_sf("ports_MAR_2.shp")
+ports <- st_read("ports_MAR_2.shp")
 
 ports_dists <- st_distance(aoi, ports)
 ports_min_dist <- apply(ports_dists, 1, min)
@@ -419,7 +419,7 @@ predictors10 <- predictors9 %>%
 #### Adding in development from LULC layer ##########
 #################################################
 
-predictors10 <- st_read("CombinedPredictors_021120.geojson")
+predictors10 <- read_csv("CombinedPredictors_021120.csv")
 
 develop <- st_read("lulc_developed_national_baseline.shp")
 
@@ -439,7 +439,7 @@ aoi_32616$area <- unclass(st_area(aoi_32616))
 ## Ok. So I want the proportion of each hex which is developed. Let's look at how I did land for this
 
 dev_int <- st_intersection(aoi_32616, dev_32)
-plot(dev_int)
+#plot(dev_int)
 
 # calculate the area of each intersected polygon (only includes developed spaces)
 dev_int$area <- unclass(st_area(dev_int))
@@ -458,9 +458,28 @@ aoi_dev <- aoi_32616 %>%
 predictors11 <- predictors10 %>% 
   left_join(aoi_dev %>% st_set_geometry(NULL) %>% dplyr::select(pid, prop_dev))
 
+
 # write it out
-st_write(predictors11, "CombinedPredictors_022520.shp")
-st_write(predictors11, "CombinedPredictors_022520.geojson")
+#st_write(predictors11, "CombinedPredictors_022520.shp")
+#st_write(predictors11, "CombinedPredictors_022520.geojson")
 # let's write it to a trackable location as well
-write_csv(predictors11 %>% st_set_geometry(NULL), "../../../mar_tourism/CombinedPredictors_022520.csv")
-write_csv(predictors11 %>% st_set_geometry(NULL), "CombinedPredictors_022520.csv" )
+write_csv(predictors11, "../../../mar_tourism/CombinedPredictors_022520.csv")
+write_csv(predictors11, "CombinedPredictors_022520.csv" )
+
+crs(predictors11)
+extent(predictors11)
+# So this is a problem. It looks like predictors is probably in the 32616 projection perhaps, based on extent
+## For now: I changed it so that predictors10 is just called in as a csv, not a shapefile
+
+###############################################################
+#### Creating a single variable for distance from airport/seaport
+
+# make sure you pull in ports and airports above, as well as run airports_maj
+summary(ports)
+ggplot(airports) + geom_sf()
+ggplot(ports) + geom_sf()
+airports_maj
+
+# combining them (all ports, plus major airports, for now)
+# NVM: Need to either add more airports or cut some ports first
+
