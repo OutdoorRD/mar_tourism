@@ -43,7 +43,6 @@ for(shpfile in shpfiles){
 # Working through them in QGIS. So far: land (fixed), mangroves (fixed), sargassum (fixed), C3
 # Let's try them manually here
 
-
 # and the same for tiffs
 tiffs <- c(#"MaxTempDaysAbove35C_BASELINE", 
            #"MEANTEMP_BASELINE",
@@ -57,6 +56,8 @@ for(tiff1 in tiffs){
 }
 
 # only worked for worldpop. Did the others in Qgis. Maxtemp, meantemp, precip
+## Update 2/25/20. Looks like I did it wrong in QGIS before. So now doing it in 
+## preparing_predictors (where I am also writing out correct wgs ones at the same time)
 
 # and actually, what C3 needs is to be converted into a raster. So, let's try it
 shpfile <- "windset_prob_stats_prob_exceed_C3"

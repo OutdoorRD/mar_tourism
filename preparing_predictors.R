@@ -410,8 +410,57 @@ predictors10 <- predictors9 %>%
   replace_na(list(WorldPop = 0))
 
 # write it out
-st_write(predictors10, "CombinedPredictors_021120.shp")
-st_write(predictors10, "CombinedPredictors_021120.geojson")
+#st_write(predictors10, "CombinedPredictors_021120.shp")
+#st_write(predictors10, "CombinedPredictors_021120.geojson")
 # let's write it to a trackable location as well
-write_csv(predictors10 %>% st_set_geometry(NULL), "../../../mar_tourism/CombinedPredictors_021120.csv")
-write_csv(predictors10 %>% st_set_geometry(NULL), "CombinedPredictors_021120.csv" )
+#write_csv(predictors10 %>% st_set_geometry(NULL), "../../../mar_tourism/CombinedPredictors_021120.csv")
+#write_csv(predictors10 %>% st_set_geometry(NULL), "CombinedPredictors_021120.csv" )
+
+#### Adding in development from LULC layer ##########
+#################################################
+
+predictors10 <- st_read("CombinedPredictors_021120.geojson")
+
+develop <- st_read("lulc_developed_national_baseline.shp")
+
+# let's make it valid and transform to 32616 for invest
+dev_valid <- st_make_valid(develop)
+dev_32 <- st_transform(dev_valid, crs = 32616)
+
+# write it out
+#st_write(dev_32, "ProjectedForInvestValid/lulc_developed_national_baseline_32616.shp")
+
+# convert aoi as well
+aoi_32616 <-  st_transform(aoi, crs = 32616)
+
+aoi_32616$area <- unclass(st_area(aoi_32616))
+
+
+## Ok. So I want the proportion of each hex which is developed. Let's look at how I did land for this
+
+dev_int <- st_intersection(aoi_32616, dev_32)
+plot(dev_int)
+
+# calculate the area of each intersected polygon (only includes developed spaces)
+dev_int$area <- unclass(st_area(dev_int))
+
+dev_areas <- dev_int %>% 
+  st_set_geometry(NULL) %>%
+  group_by(pid) %>% 
+  summarise(dev_area = sum(area))
+
+# bind on to all pids
+aoi_dev <- aoi_32616 %>%
+  left_join(dev_areas, by = "pid") %>%
+  mutate(prop_dev = if_else(is.na(dev_area), 0, dev_area/area))
+
+# bind on to predictors
+predictors11 <- predictors10 %>% 
+  left_join(aoi_dev %>% st_set_geometry(NULL) %>% dplyr::select(pid, prop_dev))
+
+# write it out
+st_write(predictors11, "CombinedPredictors_022520.shp")
+st_write(predictors11, "CombinedPredictors_022520.geojson")
+# let's write it to a trackable location as well
+write_csv(predictors11 %>% st_set_geometry(NULL), "../../../mar_tourism/CombinedPredictors_022520.csv")
+write_csv(predictors11 %>% st_set_geometry(NULL), "CombinedPredictors_022520.csv" )

@@ -16,7 +16,7 @@ modplot <- function(x){
 setwd("~/Documents/MAR/GIS/Predictors/Baseline_Inputs/")
 
 # read in the prepared predictors
-predictors <- read_csv("CombinedPredictors_021120.csv")
+predictors <- read_csv("CombinedPredictors_022520.csv")
 
 summary(predictors)
 # hmm. why do i have an NA in the vis numbers?
@@ -30,25 +30,31 @@ pred_small <- predictors %>%
   filter(!is.na(est_vis)) %>%
   dplyr::select(pid, vis_log, est_vis, Country, corals, mangroves, beach, temp, dayshot,
          precip, daysrain, protected, prop_land, wildlife, C3P,
-         air_min_dist, ports_min_dist, ruins, sargassum, roads_min_dist, WorldPop) %>%
+         air_min_dist, ports_min_dist, ruins, sargassum, roads_min_dist, WorldPop,
+         prop_dev) %>%
   mutate(logWorldPop = log1p(WorldPop))
 
 corrgram(pred_small, diag.panel = panel.density, lower.panel = panel.cor, upper.panel = panel.pts)
 
 # precipitation and days of rain are highly correlated. Will need to choose just one to include
+# prop_dev (proportion of cell that is developed), is better than worldpop. let's replace them
+
 mod1 <- lm(vis_log ~ Country + corals + mangroves + beach + temp + I(temp^2) + 
              dayshot + precip + protected + prop_land + wildlife +
-             C3P + air_min_dist + ports_min_dist + ruins + sargassum + roads_min_dist + log1p(WorldPop), 
+             C3P + air_min_dist + ports_min_dist + ruins + sargassum + roads_min_dist + prop_dev, 
            data = pred_small)
 summary(mod1)
-# only R2 = .38. Adding WorldPop helps, but still only .41.
+# only R2 = .38. Adding WorldPop helps, but still only .41. Replacing worldpop with prop_dev takes me to .43
 # Taking the log of worldpop bumps it to .45
 modplot(mod1)
 # not great, but not as terrible as they could be...
+car::vif(mod1)
+# there's some not great correlation in here
+
 
 mod2 <- MASS::glm.nb(round(est_vis) ~ Country + corals + mangroves + beach + temp + I(temp^2) + 
                        dayshot + precip + protected + prop_land + wildlife +
-                       C3P + air_min_dist + ports_min_dist + ruins + sargassum + roads_min_dist + WorldPop,
+                       C3P + air_min_dist + ports_min_dist + ruins + sargassum + roads_min_dist + prop_dev,
                      data = pred_small)
 summary(mod2)
 # doesn't work
@@ -57,15 +63,15 @@ summary(mod2)
 mod3 <- lm(vis_log ~ Country + corals + mangroves + beach + temp + I(temp^2) + 
              dayshot + precip + prop_land + wildlife +
              I(C3P*100) + air_min_dist + ports_min_dist + ruins + sargassum + 
-             roads_min_dist + log1p(WorldPop), 
+             roads_min_dist + prop_dev, 
            data = pred_small)
 summary(mod3)
 modplot(mod3)
-coefplot(mod3) + xlim(c(-5,5))
+coefplot(mod3) #+ xlim(c(-5,5))
 
 mod3a <- MASS::glm.nb(round(est_vis)~ Country + corals + mangroves + beach + temp + I(temp^2) + 
                         dayshot + precip + prop_land + wildlife +
-                        C3P + air_min_dist + ports_min_dist + ruins + sargassum + roads_min_dist + WorldPop, 
+                        C3P + air_min_dist + ports_min_dist + ruins + sargassum + roads_min_dist + prop_dev, 
                       data = pred_small)
 
 # does it work if I drop all NAs? And rescale to get everything 0-1?
@@ -88,7 +94,7 @@ summary(pred_scaled)
 
 mod3a <- MASS::glm.nb(round(est_vis)~ as.factor(Country) + corals + mangroves + beach + temp + I(temp^2) + 
                         dayshot + precip + prop_land + wildlife +
-                        C3P + air_min_dist + ports_min_dist + ruins + sargassum + roads_min_dist + logWorldPop, 
+                        C3P + air_min_dist + ports_min_dist + ruins + sargassum + roads_min_dist + prop_dev, 
                       data = pred_scaled)
 
 # still no on this one.
@@ -97,7 +103,7 @@ mod3a <- MASS::glm.nb(round(est_vis)~ as.factor(Country) + corals + mangroves + 
 mod4 <- lm(vis_log ~ Country + corals + mangroves + beach + temp + I(temp^2) + 
              dayshot + precip + prop_land + wildlife +
              C3P + air_min_dist + ports_min_dist + ruins + sargassum + 
-             roads_min_dist + logWorldPop_ns, 
+             roads_min_dist + prop_dev, 
            data = pred_scaled)
 summary(mod4)
 # samesies, but now with comparable estimates
@@ -110,7 +116,7 @@ modplot(mod4)
 # I want to look at these spatially, so I'm going to write them out
 pred_scaled$resids <- residuals(mod4)
 pred_scaled$fitted <- fitted.values(mod4)
-#write_csv(pred_scaled, "../../../ModelRuns/baseline_5k_intersect/modeling/mod4_021120.csv")
+#write_csv(pred_scaled, "../../../ModelRuns/baseline_5k_intersect/modeling/mod4_022520.csv")
 
 # Let's use mod4 as our best model for now, and make a coefplot for it
 coefplot(mod4, decreasing = TRUE)
@@ -119,6 +125,22 @@ coefplot(mod4, decreasing = TRUE)
 corrgram(pred_scaled, upper.panel = panel.pts, diag.panel = panel.density, lower.panel = panel.cor)
 #corrgram(pred_small, upper.panel = panel.pts)
 
+## Let's try for more parsimony
+# roads_min_dist conflates with a number of others. and prop_land and prop_dev are pretty related
+# Also maybe drop country?
+mod5 <- lm(vis_log ~ corals + mangroves + beach + temp + I(temp^2) + 
+             dayshot + precip  + wildlife + prop_land +
+             C3P + air_min_dist + ports_min_dist + ruins + sargassum + 
+            roads_min_dist +  prop_dev, 
+           data = pred_scaled)
+summary(mod5)
+# hmm. roads_min_dist seems pretty important (.43 to .40)
+# dropping land seems ok (.43 to .42), except that it makes dayshot and precip insig. I wonder if I should have an interaction with precip?
+##  Definitely the climate data was not as good offshore
+# Country also important - .43 to .408
+
+
+###################################################
 ### And... to try to get the negbin model to fit, let's get starting values from a poisson
 mod4pois <- glm(round(est_vis)~ as.factor(Country) + corals + mangroves + beach + temp + I(temp^2) + 
                   dayshot + precip + prop_land + wildlife +
