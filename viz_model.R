@@ -103,7 +103,7 @@ mod3a <- MASS::glm.nb(round(est_vis)~ as.factor(Country) + corals + mangroves + 
 mod4 <- lm(vis_log ~ Country + corals + mangroves + beach + temp + I(temp^2) + 
              dayshot + precip + prop_land + wildlife +
              C3P + air_min_dist + ports_min_dist + ruins + sargassum + 
-             roads_min_dist + prop_dev, 
+             roads_min_dist + I(prop_dev>0), 
            data = pred_scaled)
 summary(mod4)
 # samesies, but now with comparable estimates
@@ -112,6 +112,7 @@ summary(mod4)
 modplot(mod4)
 # not as bad as I imagined (though adding worldpop actualy makes it worse)
 #residuals(mod4)
+car::vif(mod4)
 
 # I want to look at these spatially, so I'm going to write them out
 pred_scaled$resids <- residuals(mod4)
@@ -140,6 +141,26 @@ modplot(mod5)
 ##  Definitely the climate data was not as good offshore
 # Country also important - .43 to .408
 ## Turning Developed into a binary helps (.408 to .426)
+
+
+#### How well can I model tourism over land? And how much occurs not over land?
+
+land_only <- pred_small %>% filter(prop_land > 0)
+ocean_only <- pred_small %>% filter(prop_land == 0)
+summary(ocean_only)
+dotchart(ocean_only$est_vis)
+ocean_only %>%
+  arrange(desc(est_vis))
+# At least the top couple are adjacent to land. I'd need to modify this to make it more sophisticated
+
+# But for now, let's see if the model runs better on land only
+modland <- lm(vis_log ~ Country + corals + mangroves + beach + temp + I(temp^2) + 
+             dayshot + precip + wildlife +
+             C3P + air_min_dist + ports_min_dist + ruins + sargassum + 
+             roads_min_dist + I(prop_dev>0), 
+           data = land_only)
+summary(modland) # no, actually. bummer
+modplot(modland)
 
 
 ###################################################
