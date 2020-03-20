@@ -190,27 +190,26 @@ wild_pid <- wild_int$pid
 predictors5 <- predictors4 %>%
   mutate(wildlife = if_else(pid %in% wild_pid, 1, 0))
 
-ggplot(predictors5) + geom_sf(aes(fill = wildlife))
+#ggplot(predictors5) + geom_sf(aes(fill = wildlife))
 
 ### Hurricanes
-hurricanes <- read_sf("windset_prob_stats_prob_exceed_C3_32616.shp")
-plot(hurricanes)
-st_crs(hurricanes)
-
-# just guessing what the crs is... I htink wgs84 is approp for latlong?
-#hurricanes_proj <- st_set_crs(hurricanes, value = st_crs(aoi))
-
-# let's do the same as I did for the climate data, and just look at what the
-# probability of a C3 hurricane is at the centroid of the tourism hexes
+hurricanes <- raster("windset_C3_32616_corrected.tif")
+#ggplot(hurricanes) + geom_sf()
+hurricanes
 
 aoi_centers <- st_centroid(aoi)
 
-hurricanes_int <- st_intersection(aoi_centers, hurricanes)
+hurricanes_extract <- aoi_centers %>%
+  mutate(C3P = raster::extract(hurricanes, aoi_centers)) %>%
+  st_set_geometry(NULL) %>%
+  dplyr::select(pid, C3P)
+hurricanes_extract
 
+
+# join to other predictors
 predictors6 <- predictors5 %>%
-  left_join(hurricanes_int %>% 
-              st_set_geometry(NULL) %>%
-              dplyr::select(pid, C3P), by = "pid") 
+  left_join(hurricanes_extract, by = "pid") 
+
 predictors6
 
 ### Airports
@@ -269,7 +268,7 @@ pa_min_dist <- apply(pa_dists, 1, min)
 
 predictors6$pa_min_dist <- pa_min_dist
 
-ggplot(predictors6) + geom_sf(aes(fill = pa_min_dist))
+#ggplot(predictors6) + geom_sf(aes(fill = pa_min_dist))
 
 
 #### Ruins 
