@@ -14,14 +14,9 @@ library(tidyverse)
 setwd("~/Documents/MAR/GIS/Predictors/Baseline_Inputs/")
 
 # create list of files to transform
-shpfiles <- c("airports_MAR", "archaeological_sites_combined",
-  "beach_from_geomorph_MAR_v4_shift_BZ_MX", "corals_all",
-  "landmass_adjusted_clipped_shift_BZ_MX", 
-  "Mangroves_2",
-  "ports_MAR_2", "roads_MAR_clip", 
-  "sargassum_oceancleaner_present",
-  "windset_prob_stats_prob_exceed_C3",
-  "wildlife2")
+shpfiles <- c("airports_MAR_2", 
+  "ports_MAR_3", 
+  "wildlife3")
 
 #file1 <- st_read("airports_MAR.shp")
 #all(st_is_valid(file1)) == FALSE

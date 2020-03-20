@@ -1,4 +1,5 @@
 ## Preparing predictors for MAR Visitation model ###
+## Updated 3/19/20 to call from folder where data is all projected to 32616
 
 library(sf)
 library(lwgeom)
@@ -7,44 +8,40 @@ library(ggplot2)
 library(raster)
 library(corrgram)
 
-setwd("~/Documents/MAR/GIS/Predictors/Baseline_Inputs/")
+setwd("~/Documents/MAR/GIS/Predictors/Baseline_Inputs/ProjectedForInvestValid/")
 
 # Import gridded AOI
-aoi <- st_read("../../../ModelRuns/baseline_5k_intersect/aoi_viz_exp.shp")
+aoi <- st_read("../../../../ModelRuns/baseline_5k_intersect/aoi_viz_exp.shp")
+any(!st_is_valid(aoi))
 #plot(aoi)
 #aoi_valid <- st_make_valid(aoi)
+
+# reproject to 32616
+aoi <- st_transform(aoi, crs = 32616)
 
 ## Starting with habitat layers from coastal vulnerability
 
 ## Corals (and barrier reef, which the latest CV run has separated out)
+## But that I recombined in corals_all
 # import corals
-coral <- st_read("Corals_1.shp")
-barriers <- st_read("BarrierReef_5.shp")
-coral_valid <- st_make_valid(coral)
+coral <- st_read("corals_all_32616.shp")
+#sum(!st_is_valid(coral))
 
 # create an indicator for whether or not corals occur in each grid cell
-# check the projection
-st_crs(aoi)
-st_crs(coral_valid)
-
-# reproject aoi to match coral (and hopefully other CV layers)
-aoi_nad83 <- st_transform(aoi, crs = st_crs(coral_valid))
 
 # take intersection of grid and corals
-corals_int <- st_intersection(aoi_nad83, coral_valid)
+corals_int <- st_intersection(aoi, coral)
 
 # extracting pids which contain corals
 coral_pids <- corals_int$pid
 
-# take intersection of grid and barrier
-barrier_int <- st_intersection(aoi_nad83, barriers)
-barrier_pid <- barrier_int$pid
-
-predictors <- aoi_nad83 %>% 
-  mutate(corals = if_else(pid %in% c(coral_pids, barrier_pid), 1, 0))
+predictors <- aoi %>% 
+  mutate(corals = if_else(pid %in% c(coral_pids), 1, 0))
+predictors
 
 #ggplot(predictors) + geom_sf(aes(fill = corals))
 
+### LEGACY code ###
 # let's also recombine them and export for Invest
 corals_sm <- coral %>% 
   mutate(type = "coral") %>%
@@ -63,14 +60,14 @@ corals_32616 <- st_transform(corals_all, crs = 32616)
 # write it out
 #st_write(corals_all, "corals_all.shp")
 #st_write(corals_32616, "ProjectedForInvest/corals_all_32616.shp")
+###############
 
 
 ##### Mangroves
-mangroves <- read_sf("Mangroves_2.shp")
-mangroves_valid <- st_make_valid(mangroves)
+mangroves <- read_sf("Mangroves_2_32616.shp")
 
 # take intersection of grid and mangroves
-mangroves_int <- st_intersection(aoi_nad83, mangroves_valid)
+mangroves_int <- st_intersection(aoi, mangroves)
 mangroves_pid <- mangroves_int$pid
 
 predictors <- predictors %>% 
@@ -79,8 +76,8 @@ predictors <- predictors %>%
 ggplot(predictors) + geom_sf(aes(fill = mangroves))
 
 ###### Beaches
-beach <- read_sf("beach_from_geomorph_MAR_v4_shift_BZ_MX.shp")
-beach_int <- st_intersection(aoi_nad83, beach)
+beach <- read_sf("beach_from_geomorph_MAR_v4_shift_BZ_MX_32616.shp")
+beach_int <- st_intersection(aoi, beach)
 beach_pid <- beach_int$pid
 
 predictors <- predictors %>%
@@ -92,27 +89,28 @@ ggplot(predictors) + geom_sf(aes(fill = beach))
 #### Climate
 
 # average temp
-temp <- raster("MEANTEMP_BASELINE.tif")
+temp <- raster("../ProjectedForInvest/MEANTEMP_BASELINE_32616.tif")
 #crs(temp) <- crs(aoi)
-ex_heat <- raster("MaxTempDaysAbove35C_BASELINE.tif")
-precip <- raster("PRECIP_BASELINE.tif")
-daysrain <- raster("PrecipDaysAbove1mm_BASELINE.tif")
+ex_heat <- raster("../ProjectedForInvest/MaxTempDaysAbove35C_BASELINE_32616.tif")
+precip <- raster("../ProjectedForInvest/PRECIP_BASELINE_32616.tif")
+daysrain <- raster("../ProjectedForInvest/PrecipDaysAbove1mm_BASELINE_32616.tif")
 
 aoi_centers <- st_centroid(aoi)
 
 climate <- aoi_centers %>%
-  mutate(temp = extract(temp, aoi_centers),
-         dayshot = extract(ex_heat, aoi_centers),
-         precip = extract(precip, aoi_centers),
-         daysrain = extract(daysrain, aoi_centers)) %>%
+  mutate(temp = raster::extract(temp, aoi_centers),
+         dayshot = raster::extract(ex_heat, aoi_centers),
+         precip = raster::extract(precip, aoi_centers),
+         daysrain = raster::extract(daysrain, aoi_centers)) %>%
   st_set_geometry(NULL) %>%
   dplyr::select(pid, temp, dayshot, precip, daysrain)
+climate
 
 # join to other predictors
 predictors2 <- predictors %>%
   left_join(climate, by = "pid") %>%
   mutate(vis_log = log1p(est_vis))
-
+predictors2
 
 ##### In/out of MPA
 predictors3 <- predictors2 %>% 
@@ -120,7 +118,7 @@ predictors3 <- predictors2 %>%
 
 
 ##### % land in polygon
-land <- read_sf("landmass_adjusted_clipped_shift_BZ_MX.shp")
+land <- read_sf("landmass_adjusted_clipped_shift_BZ_MX_32616.shp")
 
 ## I want to create a predictor which shows what proportion of the grid cell is land
 
@@ -129,7 +127,7 @@ aoi$area <- unclass(st_area(aoi))
 crs(land)
 
 land_int <- st_intersection(aoi, land)
-plot(land_int)
+#plot(land_int)
 
 # calculate the area of each intersected polygon (only includes land)
 land_int$area <- unclass(st_area(land_int))
@@ -151,11 +149,11 @@ predictors4 <- predictors3 %>%
               dplyr::select(pid, prop_land),
             by = "pid")
 
-
+predictors4
 ########### Write it out #####
-#write_sf(predictors4, "CombinedPredictors_111419_PARTIAL.shp")
+#write_sf(predictors4, "CombinedPredictors_20200319_PARTIAL.shp")
 ## and a csv, for fun
-#write_csv(predictors4 %>% st_set_geometry(NULL), "CombinedPredictors_111419_PARTIAL.csv")
+#write_csv(predictors4 %>% st_set_geometry(NULL), "CombinedPredictors_20200319_PARTIAL.csv")
 
 
 ### TODO:
