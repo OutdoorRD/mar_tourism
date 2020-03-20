@@ -14,15 +14,15 @@ library(tidyverse)
 setwd("~/Documents/MAR/GIS/Predictors/Baseline_Inputs/")
 
 # create list of files to transform
-shpfiles <- c("airports_MAR_2", 
-  "ports_MAR_3", 
-  "wildlife3")
+shpfiles <- c("Forest_4")
 
 #file1 <- st_read("airports_MAR.shp")
 #all(st_is_valid(file1)) == FALSE
 #if (all(st_is_valid(file1)) == FALSE) {
 #  file1 <- st_make_valid(file1)
 #}
+
+# st_zm removes any third dimensional data (z values)
 
 for(shpfile in shpfiles){
   file1 <- st_read(paste0(shpfile, ".shp"))
@@ -33,6 +33,14 @@ for(shpfile in shpfiles){
   trans <- st_transform(flat, crs = 32616)
   st_write(trans, paste0("ProjectedForInvestValid/", shpfile, "_32616.shp"), delete_layer = TRUE)
 }
+
+ggplot(trans) +geom_sf()
+
+# forests isn't working, let's run interactively
+# issue seems to be that it was becoming "GEOMETRY" type instead of "multipolygon"
+#trans2 <- st_cast(trans, "MULTIPOLYGON")
+#st_write(trans2, paste0("ProjectedForInvestValid/", shpfile, "_32616.shp"), delete_layer = TRUE)
+
 
 # getting some errors. Especially for those that have been commented out above
 # Working through them in QGIS. So far: land (fixed), mangroves (fixed), sargassum (fixed), C3

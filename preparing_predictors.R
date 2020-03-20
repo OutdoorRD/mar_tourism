@@ -12,14 +12,20 @@ setwd("~/Documents/MAR/GIS/Predictors/Baseline_Inputs/ProjectedForInvestValid/")
 
 # Import gridded AOI
 aoi <- st_read("../../../../ModelRuns/baseline_5k_intersect/aoi_viz_exp.shp")
-any(!st_is_valid(aoi))
+sum(!st_is_valid(aoi))
 #plot(aoi)
 #aoi_valid <- st_make_valid(aoi)
 
 # reproject to 32616
 aoi <- st_transform(aoi, crs = 32616)
+st_crs(aoi)
+sum(!st_is_valid(aoi))
 
-## Starting with habitat layers from coastal vulnerability
+# This seems to sometimes (but not always, be required)
+aoi <- st_make_valid(aoi)
+
+
+##### Starting with habitat layers from coastal vulnerability
 
 ## Corals (and barrier reef, which the latest CV run has separated out)
 ## But that I recombined in corals_all
@@ -97,6 +103,8 @@ daysrain <- raster("../ProjectedForInvest/PrecipDaysAbove1mm_BASELINE_32616.tif"
 
 aoi_centers <- st_centroid(aoi)
 
+# Note that these rasters have 3 layers. Extract, below, draws the value from the first layer by default.
+## This is correct, since I have layer 1 = Mean, layer 2 = 25th percentile, layer 3 = 75th percentile
 climate <- aoi_centers %>%
   mutate(temp = raster::extract(temp, aoi_centers),
          dayshot = raster::extract(ex_heat, aoi_centers),
@@ -151,9 +159,9 @@ predictors4 <- predictors3 %>%
 
 predictors4
 ########### Write it out #####
-#write_sf(predictors4, "CombinedPredictors_20200319_PARTIAL.shp")
+#write_sf(predictors4, "../CombinedPredictors_20200319_PARTIAL.shp")
 ## and a csv, for fun
-#write_csv(predictors4 %>% st_set_geometry(NULL), "CombinedPredictors_20200319_PARTIAL.csv")
+#write_csv(predictors4 %>% st_set_geometry(NULL), "../CombinedPredictors_20200319_PARTIAL.csv")
 
 
 ### TODO:
@@ -164,24 +172,19 @@ predictors4
 # sargassum
 
 # read it in
-predictors4 <- read_sf("CombinedPredictors_111419_PARTIAL.shp")
+predictors4 <- read_sf("../CombinedPredictors_20200319_PARTIAL.shp")
 
 # and continue
 ## Wildlife
 
-wildlife <- read_sf("wildlife2.shp")
-st_crs(wildlife)
-wildlife_valid <- st_make_valid(wildlife)
-
-aoi_nad27 <- st_transform(aoi, crs = st_crs(wildlife_valid))
-aoi_nad27 <- st_make_valid(aoi_nad27)
+wildlife <- read_sf("wildlife3_32616.shp")
 
 ggplot() +
-  geom_sf(data = aoi_nad27) +
-  geom_sf(data = wildlife_valid)
+  geom_sf(data = aoi) +
+  geom_sf(data = wildlife)
 
 # intersect
-wild_int <- st_intersection(aoi_nad27, wildlife_valid)
+wild_int <- st_intersection(aoi, wildlife)
 wild_pid <- wild_int$pid
 
 predictors5 <- predictors4 %>%
@@ -190,26 +193,30 @@ predictors5 <- predictors4 %>%
 ggplot(predictors5) + geom_sf(aes(fill = wildlife))
 
 ### Hurricanes
-hurricanes <- read_sf("windset_prob_stats_prob_exceed_C3.shp")
+hurricanes <- read_sf("windset_prob_stats_prob_exceed_C3_32616.shp")
 plot(hurricanes)
+st_crs(hurricanes)
 
 # just guessing what the crs is... I htink wgs84 is approp for latlong?
-hurricanes_proj <- st_set_crs(hurricanes, value = st_crs(aoi))
+#hurricanes_proj <- st_set_crs(hurricanes, value = st_crs(aoi))
 
 # let's do the same as I did for the climate data, and just look at what the
 # probability of a C3 hurricane is at the centroid of the tourism hexes
 
 aoi_centers <- st_centroid(aoi)
 
-hurricanes_int <- st_intersection(aoi_centers, hurricanes_proj)
+hurricanes_int <- st_intersection(aoi_centers, hurricanes)
 
 predictors6 <- predictors5 %>%
   left_join(hurricanes_int %>% 
               st_set_geometry(NULL) %>%
               dplyr::select(pid, C3P), by = "pid") 
+predictors6
 
 ### Airports
-airports <- st_read("airports_MAR.shp")
+airports <- st_read("airports_MAR_2_32616.shp")
+ggplot(airports) +geom_sf()
+airports
 
 # for now, only including major and mid aiports
 airports_maj <- airports %>% 
@@ -226,7 +233,7 @@ predictors6$air_min_dist <- air_min_dist
  # geom_sf(aes(fill = air_min_dist))
 
 ### Ports
-ports <- st_read("ports_MAR_2.shp")
+ports <- st_read("ports_MAR_3_32616.shp")
 
 ports_dists <- st_distance(aoi, ports)
 ports_min_dist <- apply(ports_dists, 1, min)
@@ -236,8 +243,37 @@ predictors6$ports_min_dist <- ports_min_dist
 #ggplot(predictors6) +
  # geom_sf(aes(fill = ports_min_dist))
 
+##### Let's create a joint "distance to nearest port/airport" variable
+## Using minor ports and airports, not just major ones
+ggplot() + geom_sf(data = ports) + geom_sf(data = airports, col = "blue")
+
+# first, create a joint shapefile
+air_clean <- airports %>%
+  dplyr::select(name, type, comments, geometry) %>%
+  mutate(country = NA, airsea = "Airport")
+
+ports_clean <- ports %>%
+  dplyr::select(name = portname, type = prtsize, country, comments = remarks, geometry) %>%
+  mutate(airsea = "Port")
+
+ports_air <- rbind(air_clean, ports_clean)
+ports_air
+
+# write it out (note that ports_air.shp is also 32616)
+#st_write(ports_air, "../ports_air.shp")
+#st_write(ports_air, "ports_air_32616.shp")
+
+# calculate distance to nearest airport/port
+pa_dists <- st_distance(aoi, ports_air)
+pa_min_dist <- apply(pa_dists, 1, min)
+
+predictors6$pa_min_dist <- pa_min_dist
+
+ggplot(predictors6) + geom_sf(aes(fill = pa_min_dist))
+
+
 #### Ruins 
-ruins <- st_read("archaeological_sites_combined.shp")
+ruins <- st_read("archaeological_sites_combined_32616.shp")
 
 # intersect
 ruins_int <- st_intersection(aoi, ruins)
@@ -248,7 +284,7 @@ predictors7 <- predictors6 %>%
 
 #### Sargassum
 # just intersect with presence records for now
-sargassum <- st_read("sargassum_oceancleaner_present.shp")
+sargassum <- st_read("sargassum_oceancleaner_present_32616.shp")
 # intersect
 sarg_int <- st_intersection(aoi, sargassum)
 sarg_pid <- sarg_int$pid
@@ -256,6 +292,7 @@ sarg_pid <- sarg_int$pid
 predictors8 <- predictors7 %>%
   mutate(sargassum = if_else(pid %in% sarg_pid, 1, 0))
 
+## OLD stopping point
 ### write it out
 #st_write(predictors8, "CombinedPredictors_010320_PARTIAL.shp")
 
@@ -264,11 +301,21 @@ predictors8 <- predictors7 %>%
 
 ##################################################3
 #### Read it in
-predictors8 <- read_sf("CombinedPredictors_010320_PARTIAL.shp")
+#predictors8 <- read_sf("CombinedPredictors_010320_PARTIAL.shp")
 
 
 #### Roads 
-roads <- read_sf("roads_MAR_clip.shp")
+
+########
+## For 3/20/20, doing a WORKAROUND for roads since they haven't changed, and the code below is intensive
+# read in the only partial predictors
+pred_old <- read_csv("../CombinedPredictors_010920.csv")
+predictors9 <- predictors8 %>%
+  left_join(pred_old %>% dplyr::select(pid, roads_min_dist), by = "pid")
+########
+
+## Full Roads code (not run on 3/20/20)
+roads <- read_sf("roads_MAR_clip_32616.shp")
 
 roads_dists <- st_distance(aoi, roads) # too slow (>147 min)
 
@@ -327,14 +374,103 @@ predictors9 <- predictors9 %>%
          sargassum = sargssm)
 
 # write it out
-st_write(predictors9, "CombinedPredictors_010920.shp")
-st_write(predictors9, "CombinedPredictors_010920.geojson")
+#st_write(predictors9, "CombinedPredictors_010920.shp")
+#st_write(predictors9, "CombinedPredictors_010920.geojson")
 # let's write it to a trackable location as well
-write_csv(predictors9 %>% st_set_geometry(NULL), "../../../mar_tourism/CombinedPredictors_010920.csv")
-write_csv(predictors9 %>% st_set_geometry(NULL), "CombinedPredictors_010920.csv" )
+#write_csv(predictors9 %>% st_set_geometry(NULL), "../../../mar_tourism/CombinedPredictors_010920.csv")
+#write_csv(predictors9 %>% st_set_geometry(NULL), "CombinedPredictors_010920.csv" )
 
-predictors9 <- st_read("CombinedPredictors_010920.geojson")
+#predictors9 <- st_read("CombinedPredictors_010920.geojson")
+##########
 
+### Back to running inline on 3/20/20
+
+## Worldpop no longer current. Code moved to graveyard at end
+
+
+#### Adding in development from LULC layer ##########
+#################################################
+# Calculating proportion of cell which is developed, though I'll likely drop to a binary for modeling
+
+#predictors10 <- read_csv("CombinedPredictors_021120.csv")
+predictors10 <- predictors9 # because 10 was previously the one that added in worldpop
+
+develop <- st_read("lulc_developed_national_baseline_32616.shp")
+
+# let's make it valid and transform to 32616 for invest
+#dev_valid <- st_make_valid(develop)
+#dev_32 <- st_transform(dev_valid, crs = 32616)
+
+# write it out
+#st_write(dev_32, "ProjectedForInvestValid/lulc_developed_national_baseline_32616.shp")
+
+# convert aoi as well
+#aoi_32616 <-  st_transform(aoi, crs = 32616)
+
+aoi$area <- unclass(st_area(aoi))
+
+
+## Ok. So I want the proportion of each hex which is developed. Let's look at how I did land for this
+
+dev_int <- st_intersection(aoi, develop)
+#plot(dev_int)
+
+# calculate the area of each intersected polygon (only includes developed spaces)
+dev_int$area <- unclass(st_area(dev_int))
+
+dev_areas <- dev_int %>% 
+  st_set_geometry(NULL) %>%
+  group_by(pid) %>% 
+  summarise(dev_area = sum(area))
+
+# bind on to all pids
+aoi_dev <- aoi %>%
+  left_join(dev_areas, by = "pid") %>%
+  mutate(prop_dev = if_else(is.na(dev_area), 0, dev_area/area))
+aoi_dev
+
+# bind on to predictors
+predictors11 <- predictors10 %>% 
+  left_join(aoi_dev %>% st_set_geometry(NULL) %>% dplyr::select(pid, prop_dev),
+            by = "pid")
+predictors11
+
+### Add in forest from CV
+forest <- st_read("Forest_4_32616.shp")
+all(st_is_valid(forest))
+
+# take intersection of grid and forest
+forest_int <- st_intersection(aoi, forest)
+forest_pid <- forest_int$pid
+
+predictors12 <- predictors11 %>% 
+  mutate(forest = if_else(pid %in% forest_pid, 1, 0))
+
+predictors12
+
+# write it out
+st_write(predictors12, "../CombinedPredictors_20200320.shp")
+st_write(predictors12, "../CombinedPredictors_20200320.geojson")
+# let's write it to a trackable location as well
+write_csv(predictors12, "../../../../mar_tourism/CombinedPredictors_20200320.csv")
+write_csv(predictors12, "../CombinedPredictors_20200320.csv" )
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+###### OLD #################################
 ######## Using WorldPop as a proxy for development for now (2/11/20) #######
 
 # Note that the units/values in the layer shared by Jess/Stacie seem wonky
@@ -413,71 +549,3 @@ predictors10 <- predictors9 %>%
 # let's write it to a trackable location as well
 #write_csv(predictors10 %>% st_set_geometry(NULL), "../../../mar_tourism/CombinedPredictors_021120.csv")
 #write_csv(predictors10 %>% st_set_geometry(NULL), "CombinedPredictors_021120.csv" )
-
-#### Adding in development from LULC layer ##########
-#################################################
-
-predictors10 <- read_csv("CombinedPredictors_021120.csv")
-
-develop <- st_read("lulc_developed_national_baseline.shp")
-
-# let's make it valid and transform to 32616 for invest
-dev_valid <- st_make_valid(develop)
-dev_32 <- st_transform(dev_valid, crs = 32616)
-
-# write it out
-#st_write(dev_32, "ProjectedForInvestValid/lulc_developed_national_baseline_32616.shp")
-
-# convert aoi as well
-aoi_32616 <-  st_transform(aoi, crs = 32616)
-
-aoi_32616$area <- unclass(st_area(aoi_32616))
-
-
-## Ok. So I want the proportion of each hex which is developed. Let's look at how I did land for this
-
-dev_int <- st_intersection(aoi_32616, dev_32)
-#plot(dev_int)
-
-# calculate the area of each intersected polygon (only includes developed spaces)
-dev_int$area <- unclass(st_area(dev_int))
-
-dev_areas <- dev_int %>% 
-  st_set_geometry(NULL) %>%
-  group_by(pid) %>% 
-  summarise(dev_area = sum(area))
-
-# bind on to all pids
-aoi_dev <- aoi_32616 %>%
-  left_join(dev_areas, by = "pid") %>%
-  mutate(prop_dev = if_else(is.na(dev_area), 0, dev_area/area))
-
-# bind on to predictors
-predictors11 <- predictors10 %>% 
-  left_join(aoi_dev %>% st_set_geometry(NULL) %>% dplyr::select(pid, prop_dev))
-
-
-# write it out
-#st_write(predictors11, "CombinedPredictors_022520.shp")
-#st_write(predictors11, "CombinedPredictors_022520.geojson")
-# let's write it to a trackable location as well
-write_csv(predictors11, "../../../mar_tourism/CombinedPredictors_022520.csv")
-write_csv(predictors11, "CombinedPredictors_022520.csv" )
-
-crs(predictors11)
-extent(predictors11)
-# So this is a problem. It looks like predictors is probably in the 32616 projection perhaps, based on extent
-## For now: I changed it so that predictors10 is just called in as a csv, not a shapefile
-
-###############################################################
-#### Creating a single variable for distance from airport/seaport
-
-# make sure you pull in ports and airports above, as well as run airports_maj
-summary(ports)
-ggplot(airports) + geom_sf()
-ggplot(ports) + geom_sf()
-airports_maj
-
-# combining them (all ports, plus major airports, for now)
-# NVM: Need to either add more airports or cut some ports first
-
