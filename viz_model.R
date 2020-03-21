@@ -16,10 +16,13 @@ modplot <- function(x){
 setwd("~/Documents/MAR/GIS/Predictors/Baseline_Inputs/")
 
 # read in the prepared predictors
-predictors <- read_csv("CombinedPredictors_022520.csv")
+predictors <- read_csv("CombinedPredictors_20200320.csv")
 
 summary(predictors)
 # hmm. why do i have an NA in the vis numbers?
+
+## drop pids that are slivers
+slivers <- read_csv("../../AOI/AOI_v3/Intersected/slivers.csv")
 
 predictors %>% filter(is.na(est_vis))
 # weird. I can't even see it in QGIS, it must be a tiny sliver
@@ -27,21 +30,20 @@ predictors %>% filter(is.na(est_vis))
 #### Exploring variables
 # first limiting those I display
 pred_small <- predictors %>%
-  filter(!is.na(est_vis)) %>%
-  dplyr::select(pid, vis_log, est_vis, Country, corals, mangroves, beach, temp, dayshot,
+  filter(!is.na(est_vis), !pid %in% slivers$pid) %>%
+  dplyr::select(pid, vis_log, est_vis, Country, corals, mangroves, beach, forest, temp, dayshot,
          precip, daysrain, protected, prop_land, wildlife, C3P,
-         air_min_dist, ports_min_dist, ruins, sargassum, roads_min_dist, WorldPop,
-         prop_dev) %>%
-  mutate(logWorldPop = log1p(WorldPop))
+         air_min_dist, ports_min_dist, pa_min_dist, ruins, sargassum, roads_min_dist,
+         prop_dev) 
 
 corrgram(pred_small, diag.panel = panel.density, lower.panel = panel.cor, upper.panel = panel.pts)
 
 # precipitation and days of rain are highly correlated. Will need to choose just one to include
 # prop_dev (proportion of cell that is developed), is better than worldpop. let's replace them
 
-mod1 <- lm(vis_log ~ Country + corals + mangroves + beach + temp + I(temp^2) + 
+mod1 <- lm(vis_log ~ Country + corals + mangroves + beach + forest + temp + I(temp^2) + 
              dayshot + precip + protected + prop_land + wildlife +
-             C3P + air_min_dist + ports_min_dist + ruins + sargassum + roads_min_dist + prop_dev, 
+             C3P + pa_min_dist + ruins + sargassum + I(prop_dev>0) + I(roads_min_dist==0), 
            data = pred_small)
 summary(mod1)
 # only R2 = .38. Adding WorldPop helps, but still only .41. Replacing worldpop with prop_dev takes me to .43
@@ -50,11 +52,37 @@ modplot(mod1)
 # not great, but not as terrible as they could be...
 car::vif(mod1)
 # there's some not great correlation in here
+# specifically (as of 3/20), roads_min_dist, prop_land, c3p, and dayshot
+# c3p is fairly correlated with precip.
+
+# is there a high correlation between roads in cell and dev?
+dev_roads <- pred_small %>% 
+  dplyr::select(vis_log, prop_dev, roads_min_dist) %>%
+  mutate(developed = as.integer(prop_dev >0),
+         roads = as.integer(roads_min_dist == 0))
+
+corrgram(dev_roads, diag.panel = panel.density, lower.panel = panel.cor, upper.panel = panel.pts)
+
+cor(dev_roads$developed, dev_roads$roads) # .51. fairly high, but not crazy
+glm(dev_roads$developed ~ dev_roads$roads)
+
+# adding roads seems to help (not distance from roads, just whether or not a road is in the hex)
+# And while they are correlated (.51), the VIF numbers are not actually that high
 
 
-mod2 <- MASS::glm.nb(round(est_vis) ~ Country + corals + mangroves + beach + temp + I(temp^2) + 
-                       dayshot + precip + protected + prop_land + wildlife +
-                       C3P + air_min_dist + ports_min_dist + ruins + sargassum + roads_min_dist + prop_dev,
+# more parsimonious model
+mod1a <- lm(vis_log ~ Country + corals + mangroves + beach + forest + temp + I(temp^2) + 
+              dayshot + precip  + wildlife +
+              pa_min_dist + ruins + sargassum + I(prop_dev>0) + I(roads_min_dist == 0), 
+            data = pred_small)
+summary(mod1a)
+modplot(mod1a)
+car::vif(mod1a)
+coefplot(mod1a)
+
+mod2 <- MASS::glm.nb(round(est_vis) ~ Country + corals + mangroves + beach + forest + temp + I(temp^2) + 
+                       dayshot + precip + wildlife +
+                       pa_min_dist + ruins + sargassum  + I(prop_dev>0),
                      data = pred_small)
 summary(mod2)
 # doesn't work
@@ -86,24 +114,21 @@ pred_scaled <- pred_small %>%
          air_min_dist = scale_func(air_min_dist),
          ports_min_dist = scale_func(ports_min_dist),
          roads_min_dist = scale_func(roads_min_dist),
-         WorldPop = scale_func(WorldPop),
-         logWorldPop_sc = scale_func(log1p(WorldPop)),
-         logWorldPop_ns = log1p(WorldPop))
+         pa_min_dist = scale_func(pa_min_dist))
 summary(pred_scaled)
 
 
-mod3a <- MASS::glm.nb(round(est_vis)~ as.factor(Country) + corals + mangroves + beach + temp + I(temp^2) + 
-                        dayshot + precip + prop_land + wildlife +
-                        C3P + air_min_dist + ports_min_dist + ruins + sargassum + roads_min_dist + prop_dev, 
+mod3a <- MASS::glm.nb(round(est_vis)~ as.factor(Country) + corals + mangroves + beach + forest + temp + I(temp^2) + 
+                        dayshot + precip + wildlife +
+                        pa_min_dist + ruins + sargassum + I(prop_dev>0), 
                       data = pred_scaled)
 
 # still no on this one.
 
 # how does the lm look with scaled values?
-mod4 <- lm(vis_log ~ Country + corals + mangroves + beach + temp + I(temp^2) + 
-             dayshot + precip + prop_land + wildlife +
-             C3P + air_min_dist + ports_min_dist + ruins + sargassum + 
-             roads_min_dist + I(prop_dev>0), 
+mod4 <- lm(vis_log ~ Country + corals + mangroves + beach + forest + temp + I(temp^2) + 
+             dayshot + precip  + wildlife +
+             pa_min_dist + ruins + sargassum + I(prop_dev>0) + I(roads_min_dist == 0), 
            data = pred_scaled)
 summary(mod4)
 # samesies, but now with comparable estimates
@@ -115,9 +140,9 @@ modplot(mod4)
 car::vif(mod4)
 
 # I want to look at these spatially, so I'm going to write them out
-pred_scaled$resids <- residuals(mod4)
-pred_scaled$fitted <- fitted.values(mod4)
-#write_csv(pred_scaled, "../../../ModelRuns/baseline_5k_intersect/modeling/mod4_022520.csv")
+pred_scaled$resids_rds <- residuals(mod4)
+pred_scaled$fitted_rds <- fitted.values(mod4)
+write_csv(pred_scaled, "../../../ModelRuns/baseline_5k_intersect/modeling/mod4_032020.csv")
 
 # Let's use mod4 as our best model for now, and make a coefplot for it
 coefplot(mod4, decreasing = TRUE)
@@ -244,13 +269,13 @@ plot(hist(log1p(pred_scaled$roads_min_dist)))
 # How about a bayesian negbin model?
 library(rstanarm)
 options(mc.cores = parallel::detectCores())
-mod_nb_bayes <- stan_glm.nb(round(est_vis)~ as.factor(Country) + corals + mangroves + beach + temp + I(temp^2) + 
-              dayshot + precip + prop_land + wildlife +
-              C3P + air_min_dist + ports_min_dist + ruins + sargassum + 
-                roads_min_dist + WorldPop, 
+mod_nb_bayes <- stan_glm.nb(round(est_vis)~ as.factor(Country) + corals + mangroves + beach + forest + temp + I(temp^2) + 
+                              dayshot + precip  + wildlife +
+                              pa_min_dist + ruins + sargassum + I(prop_dev>0) + I(roads_min_dist == 0), 
             data = pred_scaled)
 # started at 1:00, ended 1:15 (with 4 cores) (w/o worldpop)
 # started at 3:28, ended at 3:41, (w/ worldpop)
+# started at 3:28 (3/20/20), ended at 3:48
 
 summary(mod_nb_bayes)
 launch_shinystan(mod_nb_bayes)
@@ -259,6 +284,7 @@ launch_shinystan(mod_nb_bayes)
 
 plot(mod_nb_bayes)
 # some interesting differences from mod4 (linear)
+# as of 3/20, actually quite similar to linear model
 
 pp_validate(mod_nb_bayes)
 
@@ -273,10 +299,10 @@ mod_bayes_nums$fitted <- fitted(mod_nb_bayes)
 mod_bayes_nums$resids <- residuals(mod_nb_bayes)
 
 # write it out
-#write_csv(mod_bayes_nums, "../../../ModelRuns/baseline_5k_intersect/modeling/modbayes_021120.csv")
+#write_csv(mod_bayes_nums, "../../../ModelRuns/baseline_5k_intersect/modeling/modbayes_032020.csv")
 
 # let's save the model object too
-#write_rds(mod_nb_bayes, "../../../ModelRuns/baseline_5k_intersect/modeling/mod_nb_bayes_021120.rds")
+#write_rds(mod_nb_bayes, "../../../ModelRuns/baseline_5k_intersect/modeling/mod_nb_bayes_032020.rds")
 
 plot(predictors$est_vis ~ predictors$WorldPop) 
 abline(a = 0, b = 1)
