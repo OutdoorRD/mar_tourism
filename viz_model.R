@@ -151,6 +151,18 @@ coefplot(mod4, decreasing = TRUE)
 corrgram(pred_scaled, upper.panel = panel.pts, diag.panel = panel.density, lower.panel = panel.cor)
 #corrgram(pred_small, upper.panel = panel.pts)
 
+## no sargassum
+
+mod4a <- lm(vis_log ~ Country + corals + mangroves + beach + forest + temp + I(temp^2) + 
+             dayshot + precip  + wildlife +
+             pa_min_dist + ruins  + I(prop_dev>0) + I(roads_min_dist == 0), 
+           data = pred_scaled)
+summary(mod4a)
+# .445 vs .449
+modplot(mod4a)
+coefplot(mod4a, decreasing = TRUE)
+# beach is a little more important if I drop sargassum. Otherwise equivalent. Probaly this is the better mdoel
+
 ## Let's try for more parsimony
 # roads_min_dist conflates with a number of others. and prop_land and prop_dev are pretty related
 # Also maybe drop country?
