@@ -50,7 +50,7 @@ pred_scaled <- pred_small %>%
 summary(pred_scaled)
 
 vis_model <- lm(vis_log ~ Country + corals + mangroves + beach + forest + temp + I(temp^2) + 
-              dayshot + #precip  + 
+              dayshot + precip  + 
                 wildlife +
               pa_min_dist + ruins  + I(prop_dev>0) + I(roads_min_dist == 0), 
             data = pred_scaled)
@@ -61,7 +61,44 @@ coefplot(vis_model, decreasing = TRUE)
 
 # plotting indiv relationships
 ggplot(pred_small) +
-  geom_point(aes(x = temp, y = vis_log))
+  geom_point(aes(x = temp, y = vis_log), alpha = .2)
 
 ggplot(pred_small) +
-  geom_point(aes(x = dayshot, y = vis_log))
+  geom_point(aes(x = dayshot, y = vis_log), alpha = .2)
+
+ggplot(pred_small) +
+  geom_point(aes(x = jitter(precip), y = vis_log), alpha = .2)
+
+### Ok. I'd like to get a marginal effect plot for temperature
+# First, need to create a df that has mean values for everything else, but a range for temp.
+# (also, will need to retransform out of the scaled values)
+#... actually, since I'm not comparing magnitudes right now, I'll just rebuild the model using raw values and predict from that
+vis_model_raw <- lm(vis_log ~ Country + corals + mangroves + beach + forest + temp + I(temp^2) + 
+                  dayshot + precip  + 
+                  wildlife +
+                  pa_min_dist + ruins  + I(prop_dev>0) + I(roads_min_dist == 0), 
+                data = pred_small)
+summary(vis_model_raw)
+
+newdata_temp <- tibble(temp = seq(min(pred_small$temp, na.rm = T), max(pred_small$temp, na.rm = T), length.out = 50),
+       Country = "Belize",
+       corals = 1,
+       mangroves = 1,
+       beach = 1,
+       forest = 1,
+       dayshot = min(pred_small$dayshot, na.rm = T),
+       precip = mean(pred_small$precip, na.rm = T),
+       wildlife = 1,
+       pa_min_dist = mean(pred_small$pa_min_dist),
+       ruins = 1,
+       prop_dev = 0,
+       roads_min_dist = 0)
+
+newdata_temp$preds <- predict(vis_model_raw, newdata = newdata_temp)
+newdata_temp$preds_vis <- expm1(newdata_temp$preds)
+newdata_temp
+
+ggplot(newdata_temp) +
+  geom_line(aes(x = temp, y = preds_vis)) +
+  theme_classic()
+# peak vis at ~23.75 C
