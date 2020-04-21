@@ -45,23 +45,52 @@ ggplot(pred2) +
 #### Create shapefile of fitted values (corals_full equivalent)
 ## Not rerunning the model, since I'm assuming that corals_full is what I built it with
 modeled <- pred_scaled %>%
-  select(pid, vis_log) 
+  select(pid, vis_log, est_vis) 
 
 modeled$fitted <- vis_model$fitted.values
+modeled$fitted_vis <- expm1(modeled$fitted)
 modeled
-# really?
-test <- aoi %>%
+
+# build newdata frame
+newdata <- pred2 %>%
+  select(Country, 
+         corals = corals_new, 
+         mangroves, 
+         beach,
+         forest, 
+         temp, 
+         dayshot, 
+         precip, 
+         wildlife,
+         pa_min_dist, 
+         ruins, 
+         prop_dev, 
+         roads_min_dist)
+
+preds <- predict(vis_model, newdata = newdata)
+modeled$preds <- preds
+modeled$preds_vis <- expm1(preds)
+modeled
+
+# calculate difference
+modeled <- modeled %>%
+  mutate(diff_vis = round(fitted_vis - preds_vis, 2))
+
+# join to spatial 
+modeled_sp <- aoi %>%
+  select(pid, NAME) %>%
   left_join(modeled, by = "pid")
 
-ggplot(test) +
-  geom_sf(aes(fill = vis_log))
+# subset to belize
+modeled_bz <- modeled_sp %>% filter(NAME == "Belize")
 
-ggplot(test) +
-  geom_sf(aes(fill = fitted))
-# ok
+# check it out
+ggplot(modeled_bz) +
+  geom_sf(aes(fill = diff_vis))
 
-### Todo: predict at new values of coral (build newdata frame first)
-### Do expm1 transformation to get them into visitors
-### Subtract one from the other to get a change map
-### Join both sets of predictions & change to the spatial aoi
-### Write out three different shape files (possibly only for belize)
+# clean up for writing
+modeled_tw <- modeled_bz %>%
+  select(pid, visWcoral = fitted_vis, visWOcoral = preds_vis, vis_diff = diff_vis)
+
+# write it out
+st_write(modeled_tw, "coral_test_tourism.shp")
