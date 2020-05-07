@@ -6,6 +6,49 @@ library(raster)
 
 setwd("~/Documents/MAR/GIS/Predictors/Climate/Climate from Columbia/")
 
+## Ok, let's abstract the code below (in legacy) to make a function for converting columbia's
+##  csvs to a raster
+
+
+# converting the points into a raster
+# and Assigning them crs 32616 at the same time
+climatecsv <- precip
+convertClimate <- function(climatecsv){
+  wgs = "+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs" 
+  longproj = "+proj=utm +zone=16 +ellps=WGS84 +datum=WGS84 +units=m +no_defs"
+  
+  climate2 <- climatecsv %>%
+    mutate(x = lon-360) %>%
+    rename(y = lat) %>%
+    dplyr::select(x, y, Mean, `25thPercentile`, `75thPercentile`)
+  climate_rast <- rasterFromXYZ(climate2, crs = wgs)
+  climate_32616 <- projectRaster(climate_rast, crs = longproj)
+  climate_32616
+}
+
+## importing updated baseline precip data
+precip <- read_csv("NEX_TOURISM_PRECIP_GRID_MesoAmericanReef_BASELINE_Annual_Corrected.csv")
+precipcon <- convertClimate(precip)
+
+# write it out
+writeRaster(precipcon, "RastersSGW_WGS/PRECIP_BASELINE_corrected.tif", format = "GTiff")
+writeRaster(precipcon, "../../Baseline_Inputs/ProjectedForInvest/PRECIP_BASELINE_corrected_32616.tif", format = "GTiff")
+
+
+writeRaster(climate_rast, "comparisons/wgs_precip_test.tif", format = "GTiff")
+
+# ruh roh. Some differences in how these are looking spatially
+# Can I get away without doing the projectraster step?
+preciptest <- rasterFromXYZ(climate2, crs = longproj)
+preciptest
+# no. 
+
+# maybe what makes more sense is to reproject the points, then create a raster
+# matthew agrees
+precip
+
+
+############### Legacy ###################
 ## importing baseline data
 heat <- read_csv("NEX_TOURISM_MaxTempDaysAbove35C_GRID_MesoAmericanReef_BASELINE_Annual.csv")
 temp <- read_csv("NEX_TOURISM_MEANTEMP_GRID_MesoAmericanReef_BASELINE_Annual.csv")
