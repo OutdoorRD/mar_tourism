@@ -38,15 +38,32 @@ writeRaster(precipcon, "../../Baseline_Inputs/ProjectedForInvest/PRECIP_BASELINE
 writeRaster(climate_rast, "comparisons/wgs_precip_test.tif", format = "GTiff")
 
 # ruh roh. Some differences in how these are looking spatially
-# Can I get away without doing the projectraster step?
-preciptest <- rasterFromXYZ(climate2, crs = longproj)
-preciptest
-# no. 
 
 # maybe what makes more sense is to reproject the points, then create a raster
 # matthew agrees
-precip
+# Let's give it a try, and see how it compares to stacie's tif. If still different, then 
+# it's probably not worth me redoing my other layers
+precip1 <- read_csv("NEX_TOURISM_PRECIP_GRID_MesoAmericanReef_BASELINE_Annual.csv")
 
+# ok. First turn it into a shapefile
+precip2 <- precip1 %>% mutate(lon = lon-360)
+precip_sf <- st_as_sf(precip2, coords = c("lon", "lat"), crs = 4326)
+#ggplot(precip_sf) + geom_sf()
+# project 
+precip_sf_32 <- st_transform(precip_sf, crs = 32616)
+#ggplot(precip_sf_32) + geom_sf()
+
+# ok. And now make a raster from this
+
+empty_rast <- raster(precip_sf_32, nrows = 37, ncols = 29)
+precip_rast <- rasterize(as(precip_sf_32, "Spatial"), empty_rast)
+plot(precip_rast)
+
+# excellent. let's write it out
+writeRaster(precip_rast, "comparisons/precip_original_pts_trans_then_raster_tech_test.tif", format = "GTiff")
+# ok. That does look better. Still not identical to stacie's, but closer.
+# The question remains whether I should re-do the old layers or not. Maybe yes, since it's really
+# just a couple layers to rerun
 
 ############### Legacy ###################
 ## importing baseline data
