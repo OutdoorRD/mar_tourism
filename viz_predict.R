@@ -4,13 +4,14 @@
 ### First pass test using the corals layer that Jess created
 ### 4/20/20 SGW
 
-### RUN viz_model_clean.R first ##################
+### Updated 5/19 for new corals tests - also working to generalize
 
 library(tidyverse)
 library(sf)
 library(lwgeom)
 
-## Need to: read in AOI, new data layer, run intersection to get model inputs,
+## Need to: read in model object, existing predictors,
+##    AOI, new data layer, run intersection to get model inputs,
 ##    scale to match data inputs (relevant for non-binary predictors),
 ##    create "newdata" df that holds all else equal,
 ##    predict tourism, write out shapefile
@@ -18,25 +19,35 @@ library(lwgeom)
 ## Additionally, for the ROOT change in service rasters, need to run two scenarios 
 ##    and subtract them from each other
 
-setwd("~/Documents/MAR/ROOT/Restore_coral_test/")
+setwd("~/Documents/MAR/")
 
-baselines <- read_csv("../../GIS/Predictors/Baseline_Inputs/CombinedPredictors_20200320.csv")
+baselines <- read_csv("mar_tourism/Data/Predictors_Baseline.csv")
+viz_model_raw <- read_rds("mar_tourism/Models/viz_model_raw.rds")
+aoi <- read_sf("GIS/AOI/AOI_v3/Intersected/T_AOI_intersected_pid_32616_no_slivers.shp")
 
-coral <- read_sf("corals_all_activity_mask_removed.shp")
-aoi <- read_sf("../../GIS/AOI/AOI_v3/Intersected/T_AOI_intersected_pid_32616_no_slivers.shp")
+## Getting oriented in naming scheme
 
+# Starting with Belize Restore Coral
+country <- "Belize"
+ipm <- "ipm_05" #Restore Coral
+climate <- "clim0" #Baseline climate
+
+
+coral_new <- read_sf("ROOT/ROOT_coral_test_20200519/restore_coral_Tourism_CVmodel/MAR_coral_WGS8416N_erase_restored_areasBZ.shp")
+crs(coral_new)
+coral_valid <- st_make_valid(coral_new)
 #coral
 ## intersect corals with aoi
 # reproject and make valid
 #corals_32 <- st_transform(corals_full, crs = 32616)
 #corals_valid <- st_make_valid(corals_32)
 
-corals_int <- st_intersection(aoi, coral)
+corals_int <- st_intersection(aoi, coral_valid)
 
 corals_pids <- corals_int$pid
 
 # make a newdata frame
-pred2 <- pred_scaled %>%
+pred2 <- baselines %>%
   mutate(corals_new = if_else(pid %in% corals_pids, 1, 0))
 
 ggplot(pred2) +
@@ -44,16 +55,18 @@ ggplot(pred2) +
 
 #### Create shapefile of fitted values (corals_full equivalent)
 ## Not rerunning the model, since I'm assuming that corals_full is what I built it with
-modeled <- pred_scaled %>%
-  select(pid, vis_log, est_vis) 
+modeled <- baselines %>%
+  dplyr::select(pid, vis_log, est_vis) 
 
-modeled$fitted <- vis_model$fitted.values
+modeled$fitted <- viz_model_raw$fitted.values
 modeled$fitted_vis <- expm1(modeled$fitted)
 modeled
 
+#### Start here ####
+
 # build newdata frame
 newdata <- pred2 %>%
-  select(Country, 
+  dplyr::select(country, 
          corals = corals_new, 
          mangroves, 
          beach,
@@ -64,10 +77,10 @@ newdata <- pred2 %>%
          wildlife,
          pa_min_dist, 
          ruins, 
-         prop_dev, 
-         roads_min_dist)
+         developed, 
+         roads)
 
-preds <- predict(vis_model, newdata = newdata)
+preds <- predict(viz_model_raw, newdata = newdata)
 modeled$preds <- preds
 modeled$preds_vis <- expm1(preds)
 modeled
@@ -78,7 +91,7 @@ modeled <- modeled %>%
 
 # join to spatial 
 modeled_sp <- aoi %>%
-  select(pid, NAME) %>%
+  dplyr::select(pid, NAME) %>%
   left_join(modeled, by = "pid")
 
 # subset to belize
@@ -87,6 +100,23 @@ modeled_bz <- modeled_sp %>% filter(NAME == "Belize")
 # check it out
 ggplot(modeled_bz) +
   geom_sf(aes(fill = diff_vis))
+
+## Extract just the difference and turn it into a raster
+diff_sp <- modeled_bz %>% dplyr::select(diff_vis)
+raster
+
+empty_rast <- raster(diff_sp, res = 500)
+empty_rast
+diff_rast <- rasterize(as(diff_sp, "Spatial"), empty_rast, field = "diff_vis")
+plot(diff_rast)
+
+# write it out
+writeRaster(diff_rast, "ROOT/ROOT_coral_test_20200519/restore_coral_Tourism_CVmodel/ipm_05_rest_corl_rec_clim0.tif", format = "GTiff")
+
+
+
+
+
 
 # clean up for writing
 modeled_tw <- modeled_bz %>%
