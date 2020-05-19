@@ -28,7 +28,7 @@ slivers <- read_csv("../../AOI/AOI_v3/Intersected/slivers.csv")
 #### Exploring variables
 # first limiting those I display & mutating to reflect what's actually going into model
 pred_small <- predictors %>%
-  filter(!is.na(est_vis), !pid %in% slivers$pid) %>%
+  filter(!is.na(est_vis), !pid %in% slivers$pid, !is.na(temp)) %>%
   dplyr::select(pid, vis_log, est_vis, 
                 country = Country, 
                 corals, mangroves, beach, forest, temp, dayshot,
