@@ -29,11 +29,17 @@ aoi <- read_sf("GIS/AOI/AOI_v3/Intersected/T_AOI_intersected_pid_32616_no_sliver
 
 # Starting with Belize Restore Coral
 country <- "Belize"
-ipm <- "ipm_05" #Restore Coral
+#ipm <- "ipm_05" #Restore Coral
+#aname <- "rest_corl"
 climate <- "clim0" #Baseline climate
+#coral_new <- read_sf("ROOT/ROOT_coral_test_20200519/restore_coral_Tourism_CVmodel/MAR_coral_WGS8416N_erase_restored_areasBZ.shp")
+
+# Now doing Belize protect coral
+ipm <- "imp_06"
+aname <- "prot_corl"
+coral_new <- read_sf("ROOT/ROOT_coral_test_20200519/protect_coral_Tourism_CVmodel/MAR_coral_WGS8416N_eraseBelize.shp")
 
 
-coral_new <- read_sf("ROOT/ROOT_coral_test_20200519/restore_coral_Tourism_CVmodel/MAR_coral_WGS8416N_erase_restored_areasBZ.shp")
 crs(coral_new)
 coral_valid <- st_make_valid(coral_new)
 #coral
@@ -61,8 +67,6 @@ modeled <- baselines %>%
 modeled$fitted <- viz_model_raw$fitted.values
 modeled$fitted_vis <- expm1(modeled$fitted)
 modeled
-
-#### Start here ####
 
 # build newdata frame
 newdata <- pred2 %>%
@@ -94,16 +98,16 @@ modeled_sp <- aoi %>%
   dplyr::select(pid, NAME) %>%
   left_join(modeled, by = "pid")
 
-# subset to belize
-modeled_bz <- modeled_sp %>% filter(NAME == "Belize")
+# subset to country
+modeled_country <- modeled_sp %>% filter(NAME == country)
 
 # check it out
-ggplot(modeled_bz) +
+ggplot(modeled_country) +
   geom_sf(aes(fill = diff_vis))
 
 ## Extract just the difference and turn it into a raster
-diff_sp <- modeled_bz %>% dplyr::select(diff_vis)
-raster
+diff_sp <- modeled_country %>% dplyr::select(diff_vis)
+
 
 empty_rast <- raster(diff_sp, res = 500)
 empty_rast
@@ -111,8 +115,9 @@ diff_rast <- rasterize(as(diff_sp, "Spatial"), empty_rast, field = "diff_vis")
 plot(diff_rast)
 
 # write it out
-writeRaster(diff_rast, "ROOT/ROOT_coral_test_20200519/restore_coral_Tourism_CVmodel/ipm_05_rest_corl_rec_clim0.tif", format = "GTiff")
-
+writeRaster(diff_rast, 
+            paste0("ROOT/ROOT_coral_test_20200519/protect_coral_Tourism_CVmodel/", ipm,"_", aname, "_rec_", climate, ".tif"), 
+            format = "GTiff")
 
 
 
