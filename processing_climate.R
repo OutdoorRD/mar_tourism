@@ -1,4 +1,5 @@
 ## Exploring and preparing climate data from Columbia
+## Updated 5/18/20
 
 library(tidyverse)
 library(sf)
@@ -6,9 +7,15 @@ library(raster)
 
 setwd("~/Documents/MAR/GIS/Predictors/Climate/Climate from Columbia/")
 
-## Ok, let's abstract the code below (in legacy) to make a function for converting columbia's
-##  csvs to a raster
+## # maybe what makes more sense is to reproject the points, then create a raster. 
+## Update 5/18/20. I tried this, and got it to work. Unfortunately it creates a raster which is even farther from
+# the northern part of my AOI. I messed around with some workarounds below, but I don't think it's worth the trouble.
+## I am going to go back to the method where I transform the raster object, and deal with the resampling that happens
 
+## Ok, let's abstract the code below (in legacy) 
+## to make a function for converting columbia's
+##  csvs to a raster
+#climatecsv <- precip1
 
 # converting the points into a raster
 # and Assigning them crs 32616 at the same time
@@ -37,9 +44,34 @@ writeRaster(precipcon, "../../Baseline_Inputs/ProjectedForInvest/PRECIP_BASELINE
 
 writeRaster(climate_rast, "comparisons/wgs_precip_test.tif", format = "GTiff")
 
-# ruh roh. Some differences in how these are looking spatially
 
-# maybe what makes more sense is to reproject the points, then create a raster
+
+############# Method for going csv -> shp -> 32616 shp -> raster #######
+## TODO: I want to make the extent of my empty raster a bit bigger than the extent of the points them selves
+#extent(climate_sf_32)
+#test <- raster(nrows = 37, ncols = 29, xmn = -92.25, xmx = -85.25, ymn = 13, ymx = 22)
+#empty_rast <- projectExtent(test, crs = longproj)
+#test2 <- raster(nrows = 37, ncols = 29, xmn = -700)
+
+convertClimate <- function(climatecsv){
+  climate2 <- climatecsv %>% mutate(lon = lon - 360)
+  climate_sf <- st_as_sf(climate2, coords = c("lon", "lat"), crs = 4326)
+  # reproject
+  climate_sf_32 <- st_transform(climate_sf, crs = 32616)
+  # make an empty raster, and get the points into it
+  empty_rast <- raster(climate_sf_32, nrows = 37, ncols = 29)
+  climate_rast <- rasterize(as(climate_sf_32, "Spatial"), empty_rast, field = c("Mean", "X25thPercentile", "X75thPercentile"))
+  climate_rast
+}
+
+
+# let's try it
+precip <- read_csv("NEX_TOURISM_PRECIP_GRID_MesoAmericanReef_BASELINE_Annual_Corrected.csv")
+precip_raster <- convertClimate(precip)
+writeRaster(precip_raster, "RastersSGW_WGS/Precip_Baseline_corrected.tif", format = "GTiff")
+
+
+############### Legacy ##################
 # matthew agrees
 # Let's give it a try, and see how it compares to stacie's tif. If still different, then 
 # it's probably not worth me redoing my other layers
@@ -66,6 +98,12 @@ writeRaster(precip_rast, "comparisons/precip_original_pts_trans_then_raster_tech
 # just a couple layers to rerun
 
 ############### Legacy ###################
+
+
+# ruh roh. Some differences in how these are looking spatially
+
+################# Legacy pre-function above ##################
+
 ## importing baseline data
 heat <- read_csv("NEX_TOURISM_MaxTempDaysAbove35C_GRID_MesoAmericanReef_BASELINE_Annual.csv")
 temp <- read_csv("NEX_TOURISM_MEANTEMP_GRID_MesoAmericanReef_BASELINE_Annual.csv")
