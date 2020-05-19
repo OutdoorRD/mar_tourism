@@ -26,13 +26,21 @@ slivers <- read_csv("../../AOI/AOI_v3/Intersected/slivers.csv")
 
 
 #### Exploring variables
-# first limiting those I display
+# first limiting those I display & mutating to reflect what's actually going into model
 pred_small <- predictors %>%
   filter(!is.na(est_vis), !pid %in% slivers$pid) %>%
-  dplyr::select(pid, vis_log, est_vis, Country, corals, mangroves, beach, forest, temp, dayshot,
-                precip, protected, prop_land, wildlife, C3P,
-                air_min_dist, ports_min_dist, pa_min_dist, ruins, sargassum, roads_min_dist,
-                prop_dev) 
+  dplyr::select(pid, vis_log, est_vis, 
+                country = Country, 
+                corals, mangroves, beach, forest, temp, dayshot,
+                precip, #protected, prop_land, 
+                wildlife, #C3P, air_min_dist, ports_min_dist, 
+                pa_min_dist, ruins, #sargassum, 
+                roads_min_dist,
+                prop_dev) %>%
+  mutate(developed = as.integer(prop_dev > 0),
+         roads = as.integer(roads_min_dist == 0)) %>%
+  dplyr::select(-roads_min_dist, -prop_dev)
+#corrgram(pred_small, upper.panel = panel.pts, lower.panel = panel.cor)
 
 # does it work if I drop all NAs? And rescale to get everything 0-1?
 scale_func <- function(x) (x - min(x))/(max(x) - min(x))
@@ -42,22 +50,24 @@ pred_scaled <- pred_small %>%
          dayshot = scale_func(dayshot),
          precip = scale_func(precip),
          #daysrain = scale_func(daysrain),
-         C3P = scale_func(C3P),
-         air_min_dist = scale_func(air_min_dist),
-         ports_min_dist = scale_func(ports_min_dist),
-         roads_min_dist = scale_func(roads_min_dist),
+         #C3P = scale_func(C3P),
+         #air_min_dist = scale_func(air_min_dist),
+         #ports_min_dist = scale_func(ports_min_dist),
+         #roads_min_dist = scale_func(roads_min_dist),
          pa_min_dist = scale_func(pa_min_dist))
 summary(pred_scaled)
 
-vis_model <- lm(vis_log ~ Country + corals + mangroves + beach + forest + temp + I(temp^2) + 
+vis_model <- lm(vis_log ~ country + corals + mangroves + beach + forest + temp + I(temp^2) + 
               dayshot + precip  + 
                 wildlife +
-              pa_min_dist + ruins  + I(prop_dev>0) + I(roads_min_dist == 0), 
+              pa_min_dist + ruins  + developed + roads, 
             data = pred_scaled)
 summary(vis_model)
 # .445 vs .449
 modplot(vis_model)
 coefplot(vis_model, decreasing = TRUE)
+car::vif(vis_model)
+
 
 # plotting indiv relationships
 ggplot(pred_small) +
@@ -73,12 +83,20 @@ ggplot(pred_small) +
 # First, need to create a df that has mean values for everything else, but a range for temp.
 # (also, will need to retransform out of the scaled values)
 #... actually, since I'm not comparing magnitudes right now, I'll just rebuild the model using raw values and predict from that
-vis_model_raw <- lm(vis_log ~ Country + corals + mangroves + beach + forest + temp + I(temp^2) + 
+vis_model_raw <- lm(vis_log ~ country + corals + mangroves + beach + forest + temp + I(temp^2) + 
                   dayshot + precip  + 
                   wildlife +
-                  pa_min_dist + ruins  + I(prop_dev>0) + I(roads_min_dist == 0), 
+                  pa_min_dist + ruins  + developed + roads, 
                 data = pred_small)
 summary(vis_model_raw)
+
+# let's write out the predictors and model objects for both of these and track them
+write_csv(pred_small, "../../../mar_tourism/Data/Predictors_Baseline.csv")
+write_csv(pred_scaled, "../../../mar_tourism/Data/Predictors_Baseline_scaled.csv")
+
+write_rds(vis_model, "../../../mar_tourism/Models/viz_model_scaled.rds")
+write_rds(vis_model_raw, "../../../mar_tourism/Models/viz_model_raw.rds")
+
 
 newdata_temp <- tibble(temp = seq(min(pred_small$temp, na.rm = T), max(pred_small$temp, na.rm = T), length.out = 50),
        Country = "Belize",
