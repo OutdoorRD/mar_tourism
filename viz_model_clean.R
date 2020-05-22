@@ -40,7 +40,10 @@ pred_small <- predictors %>%
   mutate(developed = as.integer(prop_dev > 0),
          roads = as.integer(roads_min_dist == 0)) %>%
   dplyr::select(-roads_min_dist, -prop_dev)
-#corrgram(pred_small, upper.panel = panel.pts, lower.panel = panel.cor)
+corrgram(pred_small, upper.panel = panel.pts, lower.panel = panel.cor)
+
+# examining climate only
+corrgram(pred_small %>% dplyr::select(vis_log, temp, dayshot, precip), upper.panel = panel.pts, lower.panel = panel.cor)
 
 # does it work if I drop all NAs? And rescale to get everything 0-1?
 scale_func <- function(x) (x - min(x))/(max(x) - min(x))
@@ -91,15 +94,15 @@ vis_model_raw <- lm(vis_log ~ country + corals + mangroves + beach + forest + te
 summary(vis_model_raw)
 
 # let's write out the predictors and model objects for both of these and track them
-write_csv(pred_small, "../../../mar_tourism/Data/Predictors_Baseline.csv")
-write_csv(pred_scaled, "../../../mar_tourism/Data/Predictors_Baseline_scaled.csv")
+#write_csv(pred_small, "../../../mar_tourism/Data/Predictors_Baseline.csv")
+#write_csv(pred_scaled, "../../../mar_tourism/Data/Predictors_Baseline_scaled.csv")
 
-write_rds(vis_model, "../../../mar_tourism/Models/viz_model_scaled.rds")
-write_rds(vis_model_raw, "../../../mar_tourism/Models/viz_model_raw.rds")
+#write_rds(vis_model, "../../../mar_tourism/Models/viz_model_scaled.rds")
+#write_rds(vis_model_raw, "../../../mar_tourism/Models/viz_model_raw.rds")
 
 
 newdata_temp <- tibble(temp = seq(min(pred_small$temp, na.rm = T), max(pred_small$temp, na.rm = T), length.out = 50),
-       Country = "Belize",
+       country = "Belize",
        corals = 1,
        mangroves = 1,
        beach = 1,
@@ -109,14 +112,44 @@ newdata_temp <- tibble(temp = seq(min(pred_small$temp, na.rm = T), max(pred_smal
        wildlife = 1,
        pa_min_dist = mean(pred_small$pa_min_dist),
        ruins = 1,
-       prop_dev = 0,
-       roads_min_dist = 0)
+       developed = 0,
+       roads = 0)
 
 newdata_temp$preds <- predict(vis_model_raw, newdata = newdata_temp)
 newdata_temp$preds_vis <- expm1(newdata_temp$preds)
 newdata_temp
 
+# note that plotting the points here is not fair, since the line is assuming mean values of many other things
 ggplot(newdata_temp) +
   geom_line(aes(x = temp, y = preds_vis)) +
+#  geom_point(data = pred_small, aes(x = temp, y = est_vis)) +
+ # scale_y_log10() +
   theme_classic()
 # peak vis at ~23.75 C
+
+#### Let's do a marginal plot for precip
+newdata_precip <- tibble(precip = seq(min(pred_small$precip, na.rm = T), max(pred_small$precip, na.rm = T), length.out = 50),
+                       country = "Belize",
+                       corals = 1,
+                       mangroves = 1,
+                       beach = 1,
+                       forest = 1,
+                       dayshot = min(pred_small$dayshot, na.rm = T),
+                       temp = mean(pred_small$temp, na.rm = T),
+                       wildlife = 1,
+                       pa_min_dist = mean(pred_small$pa_min_dist),
+                       ruins = 1,
+                       developed = 0,
+                       roads = 0)
+
+newdata_precip$preds <- predict(vis_model_raw, newdata = newdata_precip)
+newdata_precip$preds_vis <- expm1(newdata_precip$preds)
+newdata_precip
+
+# note that plotting the points here is not fair, since the line is assuming mean values of many other things
+ggplot(newdata_precip) +
+  geom_line(aes(x = precip, y = preds)) +
+ # geom_point(data = pred_small, aes(x = precip, y = est_vis)) +
+#  scale_y_log10() +
+  theme_classic()
+
