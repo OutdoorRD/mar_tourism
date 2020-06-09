@@ -19,7 +19,7 @@ modplot <- function(x){
 setwd("~/Documents/MAR/GIS/Predictors/Baseline_Inputs/")
 
 # read in the prepared predictors
-predictors <- read_csv("CombinedPredictors_20200519.csv")
+predictors <- read_csv("CombinedPredictors_20200609.csv")
 
 ## drop pids that are slivers
 slivers <- read_csv("../../AOI/AOI_v3/Intersected/slivers.csv")
