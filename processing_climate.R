@@ -5,13 +5,16 @@
 ## In a desire not to destroy all my environments again, I've switched over to
 ## running this on my mac. Seems to work well there.
 
+## Note 6/9/20: Seems to have resolved itself (I reinstalled raster and then rgdal,
+##  full notes of this saga on the drive). Switching back to ubuntu preference
+
 library(tidyverse)
 library(sf)
 library(raster)
 
-#setwd("~/Documents/MAR/GIS/Predictors/Climate/Climate from Columbia/")
+setwd("~/Documents/MAR/GIS/Predictors/Climate/Climate from Columbia/")
 # mac
-setwd("~/Documents/Work/Recreation/MAR/ClimateFromColumbia/")
+#setwd("~/Documents/Work/Recreation/MAR/ClimateFromColumbia/")
 
 ## # maybe what makes more sense is to reproject the points, then create a raster. 
 ## Update 5/18/20. I tried this, and got it to work. Unfortunately it creates a raster which is even farther from
@@ -40,15 +43,16 @@ convertClimate <- function(climatecsv){
 }
 
 ## importing updated baseline precip data
-precip <- read_csv("WWF-MAR_PRECIP_GRID_TourismModel/NEX_TOURISM_PRECIP_GRID_MesoAmericanReef_BASELINE_Annual_Corrected.csv")
+precip <- read_csv("NEX_TOURISM_PRECIP_GRID_MesoAmericanReef_BASELINE_Annual_Corrected.csv")
 precipcon <- convertClimate(precip)
 
 # write it out
-writeRaster(precipcon, "RastersSGW_WGS/PRECIP_BASELINE_corrected.tif", format = "GTiff")
-writeRaster(precipcon, "../../Baseline_Inputs/ProjectedForInvest/PRECIP_BASELINE_corrected_32616.tif", format = "GTiff")
+## NOTE: I didn't actually use this code to write these files out, I did them on my mac and then downloaded them
+writeRaster(precipcon, "RastersSGW_WGS/PRECIP_BASELINE_corrected_2.tif", format = "GTiff")
+writeRaster(precipcon, "../../Baseline_Inputs/ProjectedForInvest/PRECIP_BASELINE_corrected_2_32616.tif", format = "GTiff")
 
 # mac
-writeRaster(precipcon, "PRECIP_BASELINE_corrected_2.tif", format = "GTiff")
+#writeRaster(precipcon, "PRECIP_BASELINE_corrected_2.tif", format = "GTiff")
 
 #writeRaster(climate_rast, "comparisons/wgs_precip_test.tif", format = "GTiff")
 
