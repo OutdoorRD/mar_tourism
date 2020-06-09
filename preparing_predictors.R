@@ -484,6 +484,39 @@ predictors13
 write_csv(predictors13, "../CombinedPredictors_20200519.csv")
 write_csv(predictors13, "../../../../mar_tourism/CombinedPredictors_20200519.csv")
 
+#### 6/9/20 #### Adding second correciton of precip layer
+
+predictors13 <- read_csv("../CombinedPredictors_20200519.csv")
+
+# workflow copied from above
+
+# reading in corrected precip
+precip <- raster("../ProjectedForInvest/PRECIP_BASELINE_corrected_2_32616.tif")
+precip
+#plot(precip)
+aoi_centers <- st_centroid(aoi)
+
+# Note that these rasters have 3 layers. Extract, below, draws the value from the first layer by default.
+## This is correct, since I have layer 1 = Mean, layer 2 = 25th percentile, layer 3 = 75th percentile
+
+precip_pid <- aoi_centers %>%
+  mutate(precip = raster::extract(precip, aoi_centers)) %>%
+  st_set_geometry(NULL) %>%
+  dplyr::select(pid, precip)
+st_crs(precip)
+
+# replace precip in old predictors. also drop daysrain
+predictors14 <- predictors13 %>%
+  dplyr::select(-precip) %>%
+  left_join(precip_pid, by = "pid")
+
+predictors14
+
+# write it out
+write_csv(predictors14, "../CombinedPredictors_20200609.csv")
+write_csv(predictors14, "../../../../mar_tourism/CombinedPredictors_20200609.csv")
+
+
 
 
 
