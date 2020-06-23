@@ -28,7 +28,7 @@ setwd("~/Documents/MAR/GIS/Predictors/Climate/Climate from Columbia/")
 
 # converting the points into a raster
 # and Assigning them crs 32616 at the same time
-climatecsv <- precip
+#climatecsv <- precip
 convertClimate <- function(climatecsv){
   wgs = "+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs" 
   longproj = "+proj=utm +zone=16 +ellps=WGS84 +datum=WGS84 +units=m +no_defs"
@@ -53,11 +53,33 @@ writeRaster(precipcon, "../../Baseline_Inputs/ProjectedForInvest/PRECIP_BASELINE
 
 # mac
 #writeRaster(precipcon, "PRECIP_BASELINE_corrected_2.tif", format = "GTiff")
-
 #writeRaster(climate_rast, "comparisons/wgs_precip_test.tif", format = "GTiff")
 
 
+####### Climate Scenarios ##########
+### Using the RCP 85 projections for 2050, specifically the 25th and 75th percentiles. 
 
+# precip
+precip50 <- read_csv("NEX_TOURISM_PRECIP_GRID_MesoAmericanReef_RCP85_2050s_Annual_Corrected.csv")
+precip50con <- convertClimate(precip50)
+precip50con
+
+# hot days
+hotdays50 <- read_csv("NEX_TOURISM_MaxTempDaysAbove35C_GRID_MesoAmericanReef_RCP85_2050s_Annual.csv")
+hd50con <- convertClimate(hotdays50)
+
+# temp
+temp50 <- read_csv("NEX_TOURISM_MEANTEMP_GRID_MesoAmericanReef_RCP85_2050s_Annual.csv")
+temp50con <- convertClimate(temp50)
+
+# Write them out
+writeRaster(precip50con, "RastersSGW_WGS/Precip_RCP85_2050s_corrected.tif", format = "GTiff")
+writeRaster(hd50con, "RastersSGW_WGS/MaxTempDaysAbove35C_RCP85_2050s.tif", format = "GTiff")
+writeRaster(temp50con, "RastersSGW_WGS/MeanTemp_RCP85_2050s.tif", format = "GTiff")
+
+
+#### OLD ##########
+##############################################################################
 ############# Method for going csv -> shp -> 32616 shp -> raster #######
 ## TODO: I want to make the extent of my empty raster a bit bigger than the extent of the points them selves
 #extent(climate_sf_32)
