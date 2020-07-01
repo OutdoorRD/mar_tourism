@@ -8,6 +8,9 @@
 ## Note 6/9/20: Seems to have resolved itself (I reinstalled raster and then rgdal,
 ##  full notes of this saga on the drive). Switching back to ubuntu preference
 
+## 7/1/20: Redoing my baseline temp and hotdays, because they seem to have shifted in ways I don't understand
+##  Want to just create them using the same method I used for the others
+
 library(tidyverse)
 library(sf)
 library(raster)
@@ -77,6 +80,19 @@ writeRaster(precip50con, "RastersSGW_WGS/Precip_RCP85_2050s_corrected.tif", form
 writeRaster(hd50con, "RastersSGW_WGS/MaxTempDaysAbove35C_RCP85_2050s.tif", format = "GTiff")
 writeRaster(temp50con, "RastersSGW_WGS/MeanTemp_RCP85_2050s.tif", format = "GTiff")
 
+
+###### Updating Baseline Temp and Hotdays ####
+# temp
+temp <- read_csv("NEX_TOURISM_MEANTEMP_GRID_MesoAmericanReef_BASELINE_Annual.csv")
+tempcon <- convertClimate(temp)
+
+# hotdays
+hotdays <- read_csv("NEX_TOURISM_MaxTempDaysAbove35C_GRID_MesoAmericanReef_BASELINE_Annual.csv")
+hdcon <- convertClimate(hotdays)
+
+# write them out
+writeRaster(tempcon, "RastersSGW_WGS/MEANTEMP_BASELINE.tif", format = "GTiff")
+writeRaster(hdcon, "RastersSGW_WGS/MaxTempDaysAbove35C_BASELINE.tif", format = "GTiff")
 
 #### OLD ##########
 ##############################################################################

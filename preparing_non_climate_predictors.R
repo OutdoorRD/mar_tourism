@@ -68,7 +68,7 @@ ports_air <- read_sf("GIS/Predictors/Baseline_Inputs/ProjectedForInvestValid/por
 #crs(aoi)
 # pull out country, and otherwise drop others
 aoi <- aoi %>%
-  dplyr::select(pid, country = Country, MPA = Name_short)
+  dplyr::select(pid, country = CNTRY_NAME, MPA = Name_short)
 
 # Run Presence/Absence
 # note that I tried to use my PresAbsFunc in a loop, but it breaks the nice "{predName}" functionality

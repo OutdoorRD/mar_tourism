@@ -23,7 +23,7 @@ library(lwgeom)
 setwd("~/Documents/MAR/")
 
 baselines <- read_csv("mar_tourism/Data/Predictors_Baseline.csv")
-climate_vals <- read_csv("mar_tourism/Data/Future_Climate_RCP85_2050s.csv")
+climate_vals <- read_csv("mar_tourism/Data/Future_Climate_RCP85_2050s_and_Current.csv")
 viz_model_raw <- read_rds("mar_tourism/Models/viz_model_raw.rds")
 aoi <- read_sf("GIS/AOI/AOI_v3/Intersected/T_AOI_intersected_pid_32616_no_slivers.shp")
 
@@ -33,7 +33,7 @@ aoi <- read_sf("GIS/AOI/AOI_v3/Intersected/T_AOI_intersected_pid_32616_no_sliver
 country <- "Belize"
 #ipm <- "ipm_05" #Restore Coral
 #aname <- "rest_corl"
-climate <- "clim2" #Baseline climate = clim0; 25th perc = clim1; 75th perc = clim2
+climate <- "clim0" #Baseline climate = clim0; 25th perc = clim1; 75th perc = clim2
 #coral_new <- read_sf("ROOT/ROOT_coral_test_20200519/restore_coral_Tourism_CVmodel/MAR_coral_WGS8416N_erase_restored_areasBZ.shp")
 
 # Now doing Belize protect coral
@@ -83,18 +83,19 @@ modeled
 
 newdata <- base_climate %>%
   dplyr::select(country, 
-         corals, #= corals_new, 
-         mangroves, 
+         prop_coral, #= corals_new, 
+         mangrove, 
          beach,
          forest, 
          temp = paste0("temp", clim_post), 
-         dayshot = paste0("hotdays", clim_post), 
+         hotdays = paste0("hotdays", clim_post), 
          precip = paste0("precip", clim_post), 
          wildlife,
          pa_min_dist, 
          ruins, 
-         developed, 
-         roads)
+         develop, 
+         roads,
+         cellarea)
 
 preds <- predict(viz_model_raw, newdata = newdata)
 modeled$preds <- preds
@@ -103,7 +104,7 @@ modeled
 
 # calculate difference
 modeled <- modeled %>%
-  mutate(diff_vis = round(fitted_vis - preds_vis, 2))
+  mutate(diff_vis = round(preds_vis - fitted_vis, 2)) # need to be careful about this line and what it means for each scenario
 
 # join to spatial 
 modeled_sp <- aoi %>%
@@ -126,6 +127,7 @@ diff_sp <- modeled_country %>% dplyr::select(diff_vis)
 # write out shp
 st_write(diff_sp, paste0("Scenarios/Climate/", ipm, "_", aname, "_rec_", climate, ".shp"))
 
+  
 ### Convert to Raster (todo: update with new empty raster that Jade shared)
 empty_rast <- raster(diff_sp, res = 500)
 empty_rast
