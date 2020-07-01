@@ -6,6 +6,8 @@ Creating this repo to track the modeling and data prep code for the tourism mode
 
 `preparing_aoi.R` - Requires: Single shapefile of AOI outline. Output: Gridded (hexagonal) AOI in ESPG 4326 for globalrec workflow.
 
+`reprojecting_files.R` - Reads in either shapefiles or rasters and writes out valid versions that have been transformed to ESPG 32616 (WGS84 16N).
+
 `preparing_predictors.R` - Large and messy script where predictors are intersected with the gridded aoi. Contains a record of how each intersection was done. Requires: AOI, various predictor shapefiles (some paths are certainly broken). Output: csv of predictor values per grid cell (`CombinedPredictors_dddd.csv`)
 
 `preparing_future_climate_predictors.R` - Equivalent to `preparing_predictors.R`, but smaller and cleaner. Inputs: AOI and future climate tiffs (from processing_climate.R). Output: csv of future climate per grid cell (`Future_Climate_RCP85_2050s.csv`)
