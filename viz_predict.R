@@ -5,6 +5,7 @@
 ### 4/20/20 SGW
 
 ### Updated 5/19 for new corals tests - also working to generalize
+### 7/1 Adding climate
 
 library(tidyverse)
 library(sf)
@@ -22,6 +23,7 @@ library(lwgeom)
 setwd("~/Documents/MAR/")
 
 baselines <- read_csv("mar_tourism/Data/Predictors_Baseline.csv")
+climate_vals <- read_csv("mar_tourism/Data/Future_Climate_RCP85_2050s.csv")
 viz_model_raw <- read_rds("mar_tourism/Models/viz_model_raw.rds")
 aoi <- read_sf("GIS/AOI/AOI_v3/Intersected/T_AOI_intersected_pid_32616_no_slivers.shp")
 
@@ -31,15 +33,23 @@ aoi <- read_sf("GIS/AOI/AOI_v3/Intersected/T_AOI_intersected_pid_32616_no_sliver
 country <- "Belize"
 #ipm <- "ipm_05" #Restore Coral
 #aname <- "rest_corl"
-climate <- "clim0" #Baseline climate
+climate <- "clim2" #Baseline climate = clim0; 25th perc = clim1; 75th perc = clim2
 #coral_new <- read_sf("ROOT/ROOT_coral_test_20200519/restore_coral_Tourism_CVmodel/MAR_coral_WGS8416N_erase_restored_areasBZ.shp")
 
 # Now doing Belize protect coral
-ipm <- "imp_06"
-aname <- "prot_corl"
-coral_new <- read_sf("ROOT/ROOT_coral_test_20200519/protect_coral_Tourism_CVmodel/MAR_coral_WGS8416N_eraseBelize.shp")
+ipm <- "climate" #"imp_06"
+aname <- "noact" #"prot_corl"
+#coral_new <- read_sf("ROOT/ROOT_coral_test_20200519/protect_coral_Tourism_CVmodel/MAR_coral_WGS8416N_eraseBelize.shp")
+
+#### Joining climate onto baselines
+base_climate <- baselines %>%
+  left_join(climate_vals, by = "pid")
+clim_post <- case_when(climate == "clim0" ~ "",
+                       climate == "clim1" ~ "25",
+                       climate == "clim2" ~ "75")
 
 
+##### Coral transforms (hopefully we want this to be in a "preparing_predictors_clean.R" script only, not here) ####
 crs(coral_new)
 coral_valid <- st_make_valid(coral_new)
 #coral
@@ -53,11 +63,12 @@ corals_int <- st_intersection(aoi, coral_valid)
 corals_pids <- corals_int$pid
 
 # make a newdata frame
-pred2 <- baselines %>%
+pred2 <- base_climate %>%
   mutate(corals_new = if_else(pid %in% corals_pids, 1, 0))
 
 ggplot(pred2) +
   geom_point(aes(x = jitter(corals), y = jitter(corals_new)))
+###################
 
 #### Create shapefile of fitted values (corals_full equivalent)
 ## Not rerunning the model, since I'm assuming that corals_full is what I built it with
@@ -69,15 +80,16 @@ modeled$fitted_vis <- expm1(modeled$fitted)
 modeled
 
 # build newdata frame
-newdata <- pred2 %>%
+
+newdata <- base_climate %>%
   dplyr::select(country, 
-         corals = corals_new, 
+         corals, #= corals_new, 
          mangroves, 
          beach,
          forest, 
-         temp, 
-         dayshot, 
-         precip, 
+         temp = paste0("temp", clim_post), 
+         dayshot = paste0("hotdays", clim_post), 
+         precip = paste0("precip", clim_post), 
          wildlife,
          pa_min_dist, 
          ruins, 
@@ -98,8 +110,11 @@ modeled_sp <- aoi %>%
   dplyr::select(pid, NAME) %>%
   left_join(modeled, by = "pid")
 
+ggplot(modeled_sp) +
+  geom_sf(aes(fill = diff_vis))
+
 # subset to country
-modeled_country <- modeled_sp %>% filter(NAME == country)
+modeled_country <- modeled_sp #%>% filter(NAME == country)
 
 # check it out
 ggplot(modeled_country) +
@@ -108,7 +123,10 @@ ggplot(modeled_country) +
 ## Extract just the difference and turn it into a raster
 diff_sp <- modeled_country %>% dplyr::select(diff_vis)
 
+# write out shp
+st_write(diff_sp, paste0("Scenarios/Climate/", ipm, "_", aname, "_rec_", climate, ".shp"))
 
+### Convert to Raster (todo: update with new empty raster that Jade shared)
 empty_rast <- raster(diff_sp, res = 500)
 empty_rast
 diff_rast <- rasterize(as(diff_sp, "Spatial"), empty_rast, field = "diff_vis")
