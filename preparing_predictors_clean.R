@@ -107,5 +107,13 @@ aoi_preds_coral
 ggplot(aoi_preds_coral) +
   geom_sf(aes(fill = prop_coral))
 
+########### Distance to nearest port/air ######
+ports_air <- read_sf("GIS/Predictors/Baseline_Inputs/ProjectedForInvestValid/ports_air_32616.shp")
 
+# calculate distance to nearest airport/port
+pa_dists <- st_distance(aoi, ports_air)
+pa_min_dist <- apply(pa_dists, 1, min)
 
+aoi_preds_coral$pa_min_dist <- pa_min_dist
+ggplot(aoi_preds_coral) + geom_sf(aes(fill = pa_min_dist))
+#####
