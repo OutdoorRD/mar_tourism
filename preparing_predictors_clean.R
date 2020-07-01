@@ -76,7 +76,7 @@ ggplot(ruins_pid) + geom_sf(aes(fill = ruins))
 ### TODO: Test whether it would be quicker to develop a workflow based on a coral raster
 ###       And check whether I should create that raster from the AOI, or use one of Jade's outputs
 # read in my current best coral footprint (note that this is likely to change, as of 6/30)
-coral <- read_sf("GIS/Predictors/Coral/coral_reef_aoi_pol_native.shp")
+coral <- read_sf("GIS/Predictors/Coral/coral_reef_aoi.shp")
 crs(coral)
 # convert to wgs 84 
 coral_32 <- st_transform(coral, crs = 32616)
@@ -89,11 +89,11 @@ coral_valid <- st_make_valid(coral_32)
 aoi$area <- unclass(st_area(aoi))
 
 # intersect
-coral_int <- st_intersection(aoi, coral_valid) # slow (>30 min)
+coral_int <- st_intersection(aoi, coral_valid) # slow (>30 min). started 12:35, finished sometime before 12:45
 # check this out, and make sure it doesn't already include the "area" from above
 
 # calculate the area of each intersected polygon (only includes coral)
-coral_int$area <- unclass(st_area(coral_int))
+coral_int$area <- unclass(st_area(coral_int)) # this is overwriting an earlier area column, and is sloppy
 coral_areas <- coral_int %>%
   st_set_geometry(NULL) %>%
   group_by(pid) %>%
@@ -103,34 +103,9 @@ aoi_preds_coral <- aoi %>%
   left_join(coral_areas, by = "pid") %>%
   mutate(prop_coral = if_else(is.na(coral_area), 0, coral_area/area))
 
+aoi_preds_coral
+ggplot(aoi_preds_coral) +
+  geom_sf(aes(fill = prop_coral))
 
 
-
-
-##################
-### before, for land:
-##### % land in polygon
-land <- read_sf("landmass_adjusted_clipped_shift_BZ_MX_32616.shp")
-
-## I want to create a predictor which shows what proportion of the grid cell is land
-
-aoi$area <- unclass(st_area(aoi))
-
-crs(land)
-
-land_int <- st_intersection(aoi, land)
-#plot(land_int)
-
-# calculate the area of each intersected polygon (only includes land)
-land_int$area <- unclass(st_area(land_int))
-
-land_areas <- land_int %>% 
-  st_set_geometry(NULL) %>%
-  group_by(pid) %>% 
-  summarise(land_area = sum(area))
-
-# bind on to all pids
-aoi_land <- aoi %>%
-  left_join(land_areas, by = "pid") %>%
-  mutate(prop_land = if_else(is.na(land_area), 0, land_area/area))
 
