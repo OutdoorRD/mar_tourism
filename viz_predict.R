@@ -33,7 +33,7 @@ aoi <- read_sf("GIS/AOI/AOI_v3/Intersected/T_AOI_intersected_pid_32616_no_sliver
 country <- "Belize"
 #ipm <- "ipm_05" #Restore Coral
 #aname <- "rest_corl"
-climate <- "clim0" #Baseline climate = clim0; 25th perc = clim1; 75th perc = clim2
+climate <- "clim2" #Baseline climate = clim0; 25th perc = clim1; 75th perc = clim2
 #coral_new <- read_sf("ROOT/ROOT_coral_test_20200519/restore_coral_Tourism_CVmodel/MAR_coral_WGS8416N_erase_restored_areasBZ.shp")
 
 # Now doing Belize protect coral
@@ -105,6 +105,7 @@ modeled
 # calculate difference
 modeled <- modeled %>%
   mutate(diff_vis = round(preds_vis - fitted_vis, 2)) # need to be careful about this line and what it means for each scenario
+modeled
 
 # join to spatial 
 modeled_sp <- aoi %>%
