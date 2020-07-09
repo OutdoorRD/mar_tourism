@@ -124,11 +124,27 @@ modeled75 <- modeled75 %>% mutate(climate = "75Perc")
 
 modeled_climate <- bind_rows(modeled25, modeled75)
 
+# calculating the percent change in visitors
+# (preds_vis - fitted_vis) / fitted_vis
+# But, since we have negative predictions, this can be more than losing 100%
+# Let's truncate to get rid of those weird values
+## TODO: This should be easier to deal with if we're working with additional future visitors
+modeled_climate <- modeled_climate %>%
+  mutate(perc_change = (round(preds_vis) - round(fitted_vis)) / round(fitted_vis) * 100,
+         perc_change = if_else(perc_change < -100, -100, perc_change))
+
 # join to spatial 
 modeled_sp <- aoi %>%
   dplyr::select(pid, NAME) %>%
   left_join(modeled_climate, by = "pid") %>%
   filter(!is.na(climate))
+
+# visualizing the percent change
+ggplot(modeled_sp) +
+  geom_sf(aes(fill = perc_change), size = .1) +
+  scale_fill_distiller(palette = "RdBu",
+                       name = "Percent Change in Tourism") +
+  facet_wrap(~climate)
 
 # visualizing the log diffs
 ggplot(modeled_sp) +
@@ -149,3 +165,4 @@ modeled_climate %>%
             median_change = median(diff_vis),
             max_positive_change = max(diff_vis),
             max_negative_change = min(diff_vis))
+  
