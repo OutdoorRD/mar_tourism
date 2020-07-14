@@ -51,9 +51,26 @@ aoi_clean <- aoi_hex_mpas %>%
 
 ggplot(aoi_clean) + geom_sf(aes(fill = name_2))
 
+# and any tiny polygons (smaller than 100,000 m2). Full hex is 21,650,635 m2
+# This has the pleasing consquence of taking me to 8000 features
+aoi_sub <- aoi_clean %>%
+  mutate(area = st_area(aoi_clean)) %>%
+  #arrange(-area) %>%
+  filter(area > units::as_units(100000, "m^2"))
+all(st_is_valid(aoi_sub))
+
+#ggplot(smalls) + geom_sf()
+#st_write(smalls, "AOI/AOI_v4/intermediate/sliverstest.shp", append = FALSE)
+
 # transform for globalrec
-aoi_clean_4326 <- st_transform(aoi_clean, crs = 4326)
+aoi_clean_4326 <- st_transform(aoi_sub, crs = 4326)
+all(st_is_valid(aoi_clean_4326))
+aoi_4326_valid <- st_make_valid(aoi_clean_4326)
+all(st_is_valid(aoi_4326_valid))
 
 # write it out
-st_write(aoi_clean, "AOI/AOI_v4/T_AOI_v4_5k.shp")
-st_write(aoi_clean_4326, "AOI/AOI_v4/T_AOI_v4_5k_4326.shp")
+st_write(aoi_sub, "AOI/AOI_v4/T_AOI_v4_5k.shp", append = FALSE)
+st_write(aoi_4326_valid, "AOI/AOI_v4/T_AOI_v4_5k_4326.shp", append = FALSE)
+  
+
+  
