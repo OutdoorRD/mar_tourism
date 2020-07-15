@@ -18,7 +18,7 @@ library(raster)
 setwd("~/Documents/MAR")
 
 # read in gridded aoi
-aoi <- read_sf("GIS/AOI/AOI_v3/Intersected/T_AOI_intersected_pid_32616_no_slivers.shp")
+aoi <- read_sf("ModelRuns/baseline_20200715/T_AOI_v4_5k_32616_pid.shp")
 all(st_is_valid(aoi))
 crs(aoi)
 
@@ -48,7 +48,6 @@ hotdays0 <- raster("GIS/Predictors/Climate/Climate from Columbia/RastersSGW_WGS/
                    band = 1)
 temp0 <- raster("GIS/Predictors/Climate/Climate from Columbia/RastersSGW_WGS/MEANTEMP_BASELINE.tif",
                 band = 1)
-
 
 climate_points <- aoi_centers %>%
   mutate(precip0 = raster::extract(precip0, aoi_centers),
