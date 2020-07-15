@@ -5,14 +5,16 @@
 ###     Total visitors to the AOI in each country to be distributed out based on PUD and TUD
 ###         (proportioned_viz_2015.csv from downscaling.r)
 ###     Outputs from preparing_socmed.R
+###     Table of "short" MPA names
 
 library(sf)
 library(tidyverse)
 
-setwd("~/Documents/MAR/ModelRuns/baseline_5k_intersect/")
+setwd("~/Documents/MAR/ModelRuns/baseline_20200715/")
 
 # read in total visitation numbers by country (proportioned from overall country numbers into the AOI in 
 #  `downscaling.R`)
+# NOTE: decided 7/15/20 not to bother rerunning downscaling with the AOIv4. The country boundary changes are too minimal to have an effect I think
 viz_2017 <- read_csv("~/Documents/MAR/Data/proportioned_viz_2017_AOIv3.csv")
 
 # also, average expenditures (for now, rough numbers). Check out the google sheet 'expenditures' for more options
@@ -24,6 +26,9 @@ avg_exp <- tibble(Country = c("Mexico", "Honduras", "Guatemala", "Belize"),
 
 # Read in AOI and smud info
 aoi_smud <- read_sf("aoi_smud.shp")
+
+# Read in list of short MPA names
+mpas <- read_csv("listofMPAs_v2.csv")
 
 ## First, let's summarise by country (since we're almost already there)
 
@@ -49,13 +54,16 @@ mar_summary
 ###   of each hex that fell inside the MPA and then proportioned the viz accordingly.
 ### The new AOI is an improvement since it shouldn't include adjacent cities in MPAs
 
+aoi_smud <- aoi_smud %>%
+  left_join(mpas %>% select(-Country), by = c("name_2" = "NAME"))
+
 mpa_smud <- aoi_smud %>%
-  group_by(Name_short = Nm_shrt, Country = NAME) %>%
+  group_by(Name_short, Country = CNTRY_N) %>%
   summarise(smud_prop = sum(smd_prp),
             tud_prop = sum(tud_prp),
             pud_prop = sum(pud_prp)) %>%
   filter(!is.na(Name_short))
-plot(mpa_smud)
+ggplot(mpa_smud) + geom_sf(aes(fill = smud_prop))
 
 # great. So now... how to get from smud to number of visitors and expenditures?
 
@@ -66,12 +74,12 @@ plot(mpa_smud)
 
 # So, summarise by country
 countries_smud <- aoi_smud %>%
-  group_by(Country = NAME) %>%
+  group_by(Country = CNTRY_N) %>%
   summarise(smud_prop = sum(smd_prp),
             tud_prop = sum(tud_prp),
             pud_prop = sum(pud_prp)) %>%
   filter(!is.na(Country))
-
+countries_smud
 
 # let's put it together to plot
 countries_ud_emp <- countries_smud %>% 
@@ -90,17 +98,19 @@ countries_ratios
 ##### creating a shapefile that includes estimated visitation per grid cell using those viz ratios ####
 ## First, just using smud_prop
 vis_per_cell <- aoi_smud %>%
-  select(pid, smud_prop = smd_prp, Country = NAME, MPA = NAME_2, MPA_short = Nm_shrt, geometry) %>%
+  select(pid, smud_prop = smd_prp, Country = CNTRY_N, MPA = name_2, MPA_short = Name_short, geometry) %>%
   left_join(countries_ratios %>% filter(socmed == "smud_prop"), by = "Country") %>%
   mutate(est_vis = smud_prop*ud_to_vis,
          est_exp = round(est_vis*AvgExp))
+
+ggplot(vis_per_cell) + geom_sf(aes(fill = log1p(est_vis)))
 
 ## write it out
 #write_sf(vis_per_cell, "aoi_viz_exp.shp")
 
 ## Let's also do this with tud and pud seperately to see if one of them better matches empirical numbers
 vis_per_cell_sep <- aoi_smud %>%
-  select(pid, smud_prop = smd_prp, tud_prop = tud_prp, pud_prop = pud_prp, Country = NAME, MPA = NAME_2, MPA_short = Nm_shrt, geometry) %>%
+  select(pid, smud_prop = smd_prp, tud_prop = tud_prp, pud_prop = pud_prp, Country = CNTRY_N, MPA = name_2, MPA_short = Name_short, geometry) %>%
   gather(key = "socmed", value = "prop", tud_prop, pud_prop, smud_prop) %>%
   left_join(countries_ratios, by = c("Country", "socmed")) %>%
   mutate(est_vis = prop*ud_to_vis,
@@ -175,7 +185,7 @@ mpa_comps %>%
 
 
 ############ Plotting MPA Summaries #########
-countrytp <- "Honduras"
+countrytp <- "Guatemala"
 ggplot(mpa_summaries %>% filter(Country == countrytp, socmed == "smud_prop")) +
   geom_col(aes(x = reorder(MPA_short, visitors), y = visitors), fill = "darkred", width = .7) +
   coord_flip() +
@@ -202,7 +212,7 @@ ggplot(mpa_summaries %>% filter(socmed %in% c("smud_prop"))) +
   theme_bw()
 
 # write it out
-#ggsave(paste0("~/Documents/MAR/Deliverables/August Workshop/figs/mpas_all.png"), width = 8, height = 8, units = "in")
+#ggsave(paste0("figs/mpas_all.png"), width = 8, height = 8, units = "in")
 
 ## Let's do the all MPAs plot, but add in the empirical vis numbers
 mpas_comps_tall <- mpa_comps %>% 

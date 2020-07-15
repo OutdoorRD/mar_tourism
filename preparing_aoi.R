@@ -8,7 +8,7 @@ setwd("~/Documents/MAR/GIS/")
 
 aoi <- read_sf("AOI/AOI_v4/Tourism_AOI_v4.shp")
 aoi_countries <- read_sf("AOI/AOI_v4/T_AOI_v4_by_country_smoothed.shp")
-mpas <- read_sf("BordersandProtectedAreas/MPA/MPA_Updates_July_2020/MPA_Network_WGS8416N_v2.shp")
+mpas <- read_sf("BordersandProtectedAreas/MPA/MPA_Updates_July_2020/MPA_Network_WGS8416N_v3.shp")
 st_crs(mpas)
 
 # transform to projected coord system
@@ -43,7 +43,7 @@ u_countries
 # Then, I loaded the above file into QGIS, and unioned it with the mpas layer (since it wasn't working here)
 # Read in the result:
 
-aoi_hex_mpas <- read_sf("AOI/AOI_v4/intermediate/T_AOI_v4_5k_countries_MPAs_32616.shp")
+aoi_hex_mpas <- read_sf("AOI/AOI_v4/intermediate/T_AOI_v4_5k_countries_MPAs_32616_v2.shp")
 
 # remove extra columns
 aoi_clean <- aoi_hex_mpas %>%

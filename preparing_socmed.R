@@ -5,7 +5,7 @@ library(sf)
 library(tidyverse)
 library(lubridate)
 
-setwd("~/Documents/MAR/ModelRuns/baseline_5k_intersect/")
+setwd("~/Documents/MAR/ModelRuns/baseline_20200715/")
 
 ## QUESTION: Timescale. Does it make sense to just add together average annual user-days from two 
 # different timeframes (2005-2018 vs 2012-2018)? This would get me the most data. Could be justified
@@ -61,7 +61,7 @@ avg_ann_ud <- avg_ann_pud %>%
 #write_csv(avg_ann_ud, "avg_ann_smud_2005plus_19_101_SMUD.csv")
 
 # and, let's make a shapefile version to write out
-aoi <- read_sf("T_AOI_intersected_pid.shp")
+aoi <- read_sf("T_AOI_v4_5k_4326_pid.shp")
 aoi_smud <- avg_ann_ud %>% left_join(aoi, by = "pid")
 
 # write out
