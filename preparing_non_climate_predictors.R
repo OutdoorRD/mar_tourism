@@ -46,19 +46,24 @@ PresAbsFunc <- function(predictor, aoi = aoi){
 setwd("~/Documents/MAR")
 
 # Start by reading in the files
-aoi <- read_sf("GIS/AOI/AOI_v3/Intersected/T_AOI_intersected_pid_32616_no_slivers.shp")
+aoi <- read_sf("ModelRuns/baseline_20200715/T_AOI_v4_5k_32616_pid.shp")
+
+# read in variables that have already been intersected in QGIS (forest & coral)
+forest <- read_sf("GIS/Predictors/LULC/T_AOI_v4_5k_32616_coastal_forest.shp")
+coral <- read_sf("GIS/Predictors/Coral/CoralCover/0_mar/T_AOI_coral_baseline.geojson")
 
 # Presence/absence variables
 beach <- read_sf("GIS/Predictors/Baseline_Inputs/ProjectedForInvestValid/beach_from_geomorph_MAR_v4_shift_BZ_MX_32616.shp")
 mangrove <- read_sf("GIS/Predictors/Baseline_Inputs/ProjectedForInvestValid/Mangroves_2_32616.shp")
 wildlife <- read_sf("GIS/Predictors/Baseline_Inputs/ProjectedForInvestValid/wildlife3_32616.shp")
-forest <- read_sf("GIS/Predictors/Baseline_Inputs/ProjectedForInvestValid/Forest_4_32616.shp")
+#forest <- read_sf("GIS/Predictors/Baseline_Inputs/ProjectedForInvestValid/Forest_4_32616.shp")
 ruins <- read_sf("GIS/Predictors/Baseline_Inputs/ProjectedForInvestValid/archaeological_sites_combined_32616.shp")
 roads <- read_sf("GIS/Predictors/Baseline_Inputs/ProjectedForInvestValid/roads_MAR_clip_32616.shp")
 develop <- read_sf("GIS/Predictors/Baseline_Inputs/ProjectedForInvestValid/lulc_developed_national_baseline_32616.shp")
 
+# not running coral because I think I need a new datasource/workflow
 # Coral
-coral <- read_sf("GIS/Predictors/Coral/coral_reef_aoi.shp")
+#coral <- read_sf("GIS/Predictors/Coral/coral_reef_aoi.shp")
 
 # Ports / Air
 ports_air <- read_sf("GIS/Predictors/Baseline_Inputs/ProjectedForInvestValid/ports_air_32616.shp")
@@ -68,7 +73,19 @@ ports_air <- read_sf("GIS/Predictors/Baseline_Inputs/ProjectedForInvestValid/por
 #crs(aoi)
 # pull out country, and otherwise drop others
 aoi <- aoi %>%
-  dplyr::select(pid, country = CNTRY_NAME, MPA = Name_short)
+  dplyr::select(pid, country = CNTRY_NAME)#, MPA = Name_short) # my new aoi doesn't have MPA names embedded
+
+# cleanup coral and forest
+coral_pid <- coral %>% 
+  st_set_geometry(NULL) %>%
+  mutate(coral_prop = if_else(is.na(baseline_mean), 0, baseline_mean)) %>%
+  dplyr::select(pid, coral_prop)
+
+forest_pid <- forest %>%
+  st_set_geometry(NULL) %>%
+  mutate(forest = if_else(baseline_s > 10, 1, 0))
+  dplyr::select(pid, forest)
+
 
 # Run Presence/Absence
 # note that I tried to use my PresAbsFunc in a loop, but it breaks the nice "{predName}" functionality
@@ -76,24 +93,50 @@ aoi <- aoi %>%
 beach_pid <- PresAbsFunc(beach, aoi)
 mangrove_pid <- PresAbsFunc(mangrove, aoi) # slow
 wildlife_pid <- PresAbsFunc(wildlife, aoi)
-forest_pid <- PresAbsFunc(forest, aoi) # slowish
+#forest_pid <- PresAbsFunc(forest, aoi) # slowish
 ruins_pid <- PresAbsFunc(ruins, aoi)
 roads_pid <- PresAbsFunc(roads, aoi)
 develop_pid <- PresAbsFunc(develop, aoi)
 
 
 # bind them all together
-preds_pa <- aoi %>% 
+predictors <- aoi %>% 
+  left_join(coral_pid) %>%
+  left_join(forest_pid) %>%
   left_join(beach_pid) %>%
   left_join(mangrove_pid) %>%
   left_join(wildlife_pid) %>%
-  left_join(forest_pid) %>%
   left_join(ruins_pid) %>%
   left_join(roads_pid) %>%
   left_join(develop_pid)
 
 
 
+########### Distance to nearest port/air #####
+
+# calculate distance to nearest airport/port
+pa_dists <- st_distance(predictors, ports_air)
+pa_min_dist <- apply(pa_dists, 1, min)
+
+predictors$pa_min_dist <- pa_min_dist
+#ggplot(preds_coral) + geom_sf(aes(fill = pa_min_dist))
+predictors
+#####
+
+
+
+    ## Write it out
+write_sf(predictors, paste0("mar_tourism/Data/NonClimatePredictors_", dddd, ".geojson"))
+write_csv(predictors %>% st_set_geometry(NULL), paste0("mar_tourism/Data/NonClimatePredictors_", dddd, ".csv"))
+
+
+
+
+
+
+
+
+#################################### OLD #############################
 ############## Function for percent coverage (for coral) ########
 ### NOTE: The workflow below is fairly slow (better with the simplified poly from jade) 
 ### TODO: Test whether it would be quicker to develop a workflow based on a coral raster
@@ -128,19 +171,4 @@ preds_coral <- preds_pa %>%
 
 preds_coral
 #ggplot(preds_coral) +
- # geom_sf(aes(fill = prop_coral))
-
-########### Distance to nearest port/air ######
-
-# calculate distance to nearest airport/port
-pa_dists <- st_distance(preds_coral, ports_air)
-pa_min_dist <- apply(pa_dists, 1, min)
-
-preds_coral$pa_min_dist <- pa_min_dist
-#ggplot(preds_coral) + geom_sf(aes(fill = pa_min_dist))
-preds_coral
-#####
-
-## Write it out
-write_sf(preds_coral, paste0("mar_tourism/Data/NonClimatePredictors_", dddd, ".geojson"))
-write_csv(preds_coral %>% st_set_geometry(NULL), paste0("mar_tourism/Data/NonClimatePredictors_", dddd, ".csv"))
+# geom_sf(aes(fill = prop_coral))
