@@ -11,6 +11,8 @@
 ### Updated 5/19 for new corals tests - also working to generalize
 ### 7/1 Adding climate
 
+### 7/20 Running with newest model and aoi
+
 library(tidyverse)
 library(sf)
 library(lwgeom)
@@ -29,7 +31,7 @@ setwd("~/Documents/MAR/")
 baselines <- read_csv("mar_tourism/Data/Predictors_Baseline.csv")
 climate_vals <- read_csv("mar_tourism/Data/Future_Climate_RCP85_2050s_and_Current.csv")
 viz_model_raw <- read_rds("mar_tourism/Models/viz_model_raw.rds")
-aoi <- read_sf("GIS/AOI/AOI_v3/Intersected/T_AOI_intersected_pid_32616_no_slivers.shp")
+aoi <- read_sf("ModelRuns/baseline_20200715/T_AOI_v4_5k_32616_pid.shp")
 
 ## Getting oriented in naming scheme
 
@@ -37,7 +39,7 @@ aoi <- read_sf("GIS/AOI/AOI_v3/Intersected/T_AOI_intersected_pid_32616_no_sliver
 country <- "Belize"
 #ipm <- "ipm_05" #Restore Coral
 #aname <- "rest_corl"
-climate <- "clim2" #Baseline climate = clim0; 25th perc = clim1; 75th perc = clim2
+climate <- "clim1" #Baseline climate = clim0; 25th perc = clim1; 75th perc = clim2
 #coral_new <- read_sf("ROOT/ROOT_coral_test_20200519/restore_coral_Tourism_CVmodel/MAR_coral_WGS8416N_erase_restored_areasBZ.shp")
 
 # Now doing Belize protect coral
@@ -52,27 +54,6 @@ clim_post <- case_when(climate == "clim0" ~ "",
                        climate == "clim1" ~ "25",
                        climate == "clim2" ~ "75")
 
-
-##### Coral transforms (hopefully we want this to be in a "preparing_predictors_clean.R" script only, not here) ####
-crs(coral_new)
-coral_valid <- st_make_valid(coral_new)
-#coral
-## intersect corals with aoi
-# reproject and make valid
-#corals_32 <- st_transform(corals_full, crs = 32616)
-#corals_valid <- st_make_valid(corals_32)
-
-corals_int <- st_intersection(aoi, coral_valid)
-
-corals_pids <- corals_int$pid
-
-# make a newdata frame
-pred2 <- base_climate %>%
-  mutate(corals_new = if_else(pid %in% corals_pids, 1, 0))
-
-ggplot(pred2) +
-  geom_point(aes(x = jitter(corals), y = jitter(corals_new)))
-###################
 
 #### Create shapefile of fitted values (corals_full equivalent)
 ## Not rerunning the model, since I'm assuming that corals_full is what I built it with
@@ -91,10 +72,10 @@ modeled
 
 newdata <- base_climate %>%
   dplyr::select(country, 
-                prop_coral, #= corals_new, 
+                coral_prop, #= corals_new, 
                 mangrove, 
                 beach,
-                forest, 
+                forest_prop, 
                 temp = paste0("temp", clim_post), 
                 hotdays = paste0("hotdays", clim_post), 
                 precip = paste0("precip", clim_post), 
@@ -115,8 +96,8 @@ modeled <- modeled %>%
   mutate(diff_vis = round(preds_vis - fitted_vis, 2),
          diff_log = preds - fitted) # need to be careful about this line and what it means for each scenario
 
-# depending on above climate choice, choose one
-#modeled25 <- modeled
+# depending on above climate choice, choose one. Then return to top and rerun with other climate choice
+modeled25 <- modeled
 #modeled75 <- modeled
 
 modeled25 <- modeled25 %>% mutate(climate = "25Perc")
@@ -135,7 +116,7 @@ modeled_climate <- modeled_climate %>%
 
 # join to spatial 
 modeled_sp <- aoi %>%
-  dplyr::select(pid, NAME) %>%
+  dplyr::select(pid) %>%
   left_join(modeled_climate, by = "pid") %>%
   filter(!is.na(climate))
 
