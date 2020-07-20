@@ -54,9 +54,8 @@ coral <- read_sf("GIS/Predictors/Coral/CoralCover/0_mar/T_AOI_coral_baseline.geo
 
 # Presence/absence variables
 beach <- read_sf("GIS/Predictors/Baseline_Inputs/ProjectedForInvestValid/beach_from_geomorph_MAR_v4_shift_BZ_MX_32616.shp")
-mangrove <- read_sf("GIS/Predictors/Baseline_Inputs/ProjectedForInvestValid/Mangroves_2_32616.shp")
+mangrove <- read_sf("GIS/Predictors/Baseline_Inputs/ProjectedForInvestValid/Mangrove_v5_updated2019_32616.shp")
 wildlife <- read_sf("GIS/Predictors/Baseline_Inputs/ProjectedForInvestValid/wildlife3_32616.shp")
-#forest <- read_sf("GIS/Predictors/Baseline_Inputs/ProjectedForInvestValid/Forest_4_32616.shp")
 ruins <- read_sf("GIS/Predictors/Baseline_Inputs/ProjectedForInvestValid/archaeological_sites_combined_32616.shp")
 roads <- read_sf("GIS/Predictors/Baseline_Inputs/ProjectedForInvestValid/roads_MAR_clip_32616.shp")
 develop <- read_sf("GIS/Predictors/Baseline_Inputs/ProjectedForInvestValid/lulc_developed_national_baseline_32616.shp")
@@ -76,14 +75,22 @@ aoi <- aoi %>%
   dplyr::select(pid, country = CNTRY_NAME)#, MPA = Name_short) # my new aoi doesn't have MPA names embedded
 
 # cleanup coral and forest
+# note that baseline_mean is the mean of the binary coral raster w/in the hex. So, it ends up being proportion of the 
+# hex covered by the footprint
+# Also grabbing MPA info from this layer
 coral_pid <- coral %>% 
   st_set_geometry(NULL) %>%
   mutate(coral_prop = if_else(is.na(baseline_mean), 0, baseline_mean)) %>%
-  dplyr::select(pid, coral_prop)
+  dplyr::select(pid, name_2, coral_prop)
 
+# TODO: write this out as a geojson in the future and standardize naming
+# For now, note that "baseline_s" is the baseline_sum of the binary coastal forest raster in the hex. 
+# So, I'm counting coastal forest as "present" if there are 10 or more 30x30m raster cells classified
+# as coastal forest within the hex. I'm using 10 in order to drop places that I think might be random noise
+# (a full size hex has 24,091 raster cells inside it)
 forest_pid <- forest %>%
   st_set_geometry(NULL) %>%
-  mutate(forest = if_else(baseline_s > 10, 1, 0))
+  mutate(forest = if_else(baseline_s > 10, 1, 0)) %>%
   dplyr::select(pid, forest)
 
 

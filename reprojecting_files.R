@@ -8,13 +8,13 @@
 library(sf)
 library(lwgeom) # for st_make_valid()
 library(raster)
-library(fasterize)
+#library(fasterize)
 library(tidyverse)
 
 setwd("~/Documents/MAR/GIS/Predictors/Baseline_Inputs/")
 
 # create list of files to transform
-shpfiles <- c("Forest_4")
+shpfiles <- c("Mangrove_v5_updated2019")
 
 #file1 <- st_read("airports_MAR.shp")
 #all(st_is_valid(file1)) == FALSE
