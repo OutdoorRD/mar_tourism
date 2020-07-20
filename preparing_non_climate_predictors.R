@@ -70,9 +70,9 @@ ports_air <- read_sf("GIS/Predictors/Baseline_Inputs/ProjectedForInvestValid/por
 # Work with AOI
 #all(st_is_valid(aoi))
 #crs(aoi)
-# pull out country, and otherwise drop others
+# reordering and renaming columns in aoi
 aoi <- aoi %>%
-  dplyr::select(pid, country = CNTRY_NAME)#, MPA = Name_short) # my new aoi doesn't have MPA names embedded
+  dplyr::select(pid, country = CNTRY_NAME, name_2, cellarea = area)
 
 # cleanup coral and forest
 # note that baseline_mean is the mean of the binary coral raster w/in the hex. So, it ends up being proportion of the 
@@ -81,7 +81,7 @@ aoi <- aoi %>%
 coral_pid <- coral %>% 
   st_set_geometry(NULL) %>%
   mutate(coral_prop = if_else(is.na(baseline_mean), 0, baseline_mean)) %>%
-  dplyr::select(pid, name_2, coral_prop)
+  dplyr::select(pid, coral_prop)
 
 # TODO: write this out as a geojson in the future and standardize naming
 # For now, note that "baseline_s" is the baseline_sum of the binary coastal forest raster in the hex. 
@@ -90,17 +90,17 @@ coral_pid <- coral %>%
 # (a full size hex has 24,091 raster cells inside it)
 forest_pid <- forest %>%
   st_set_geometry(NULL) %>%
-  mutate(forest = if_else(baseline_s > 10, 1, 0)) %>%
-  dplyr::select(pid, forest)
+  mutate(forest = if_else(baseline_s > 10, 1, 0),
+         forest_prop = if_else(is.na(baseline_m), 0, baseline_m)) %>%
+  dplyr::select(pid, forest, forest_prop)
 
-
+ggplot(forest) + geom_sf(aes(fill = baseline_m))
 # Run Presence/Absence
 # note that I tried to use my PresAbsFunc in a loop, but it breaks the nice "{predName}" functionality
 
 beach_pid <- PresAbsFunc(beach, aoi)
 mangrove_pid <- PresAbsFunc(mangrove, aoi) # slow
 wildlife_pid <- PresAbsFunc(wildlife, aoi)
-#forest_pid <- PresAbsFunc(forest, aoi) # slowish
 ruins_pid <- PresAbsFunc(ruins, aoi)
 roads_pid <- PresAbsFunc(roads, aoi)
 develop_pid <- PresAbsFunc(develop, aoi)
@@ -133,7 +133,7 @@ predictors
 
 
     ## Write it out
-write_sf(predictors, paste0("mar_tourism/Data/NonClimatePredictors_", dddd, ".geojson"))
+write_sf(predictors, paste0("mar_tourism/Data/NonClimatePredictors_", dddd, ".geojson"), delete_dsn = TRUE)
 write_csv(predictors %>% st_set_geometry(NULL), paste0("mar_tourism/Data/NonClimatePredictors_", dddd, ".csv"))
 
 

@@ -21,8 +21,8 @@ modplot <- function(x){
 setwd("~/Documents/MAR/mar_tourism/Data/")
 
 # read in the prepared predictors
-aoi_viz_exp <- read_sf("../../ModelRuns/baseline_5k_intersect/aoi_viz_exp.shp")
-predictors <- read_csv("NonClimatePredictors_20200701.csv")
+aoi_viz_exp <- read_sf("../../ModelRuns/baseline_20200715/aoi_viz_exp.shp")
+predictors <- read_csv("NonClimatePredictors_20200720.csv")
 climatepreds <- read_csv("Future_Climate_RCP85_2050s_and_Current.csv")
 
 est_vis <- aoi_viz_exp %>%
@@ -40,6 +40,15 @@ pred_small <- est_vis %>%
   filter(!is.na(precip))
 summary(pred_small)
 
+# why do I have negative hotdays? Tracked this back to my rasterizing step.
+# TODO: replace these with zeros. But I don't think this has a big impact on anything,
+# so leaving as is for now
+
+# look at forest
+#predsSF <- aoi_viz_exp %>% left_join(predictors)
+#ggplot(predsSF) + geom_sf(aes(fill = forest))
+
+
 #### Exploring variables
 # first limiting those I display & mutating to reflect what's actually going into model
 #pred_small <- predictors %>%
@@ -55,18 +64,18 @@ summary(pred_small)
   #mutate(developed = as.integer(prop_dev > 0),
    #      roads = as.integer(roads_min_dist == 0)) %>%
   #dplyr::select(-roads_min_dist, -prop_dev)
-corrgram(pred_small, upper.panel = panel.pts, lower.panel = panel.cor)
+corrgram(pred_small, upper.panel = panel.pts, lower.panel = panel.cor, diag.panel = panel.density)
 
 # examining climate only
-corrgram(pred_small %>% dplyr::select(vis_log, temp, hotdays, precip), upper.panel = panel.pts, lower.panel = panel.cor)
+#corrgram(pred_small %>% dplyr::select(vis_log, temp, hotdays, precip), upper.panel = panel.pts, lower.panel = panel.cor)
 
 # does it work if I drop all NAs? And rescale to get everything 0-1?
 scale_func <- function(x) (x - min(x))/(max(x) - min(x))
 pred_scaled <- pred_small %>% 
-  filter(!is.na(est_vis) & !is.na(temp)) %>%
-  mutate(temp0 = scale_func(temp),
-         hotdays0 = scale_func(hotdays),
-         precip0 = scale_func(precip),
+  #filter(!is.na(est_vis) & !is.na(temp)) %>%
+  mutate(temp = scale_func(temp),
+         hotdays = scale_func(hotdays),
+         precip = scale_func(precip),
          #daysrain = scale_func(daysrain),
          #C3P = scale_func(C3P),
          #air_min_dist = scale_func(air_min_dist),
@@ -76,7 +85,7 @@ pred_scaled <- pred_small %>%
          cellarea = scale_func(cellarea))
 summary(pred_scaled)
 
-vis_model <- lm(vis_log ~ country + prop_coral + mangrove + beach + forest + temp + I(temp^2) + 
+vis_model <- lm(vis_log ~ country + coral_prop + mangrove + beach + forest_prop + temp + I(temp^2) + 
               hotdays + precip  + 
                 wildlife +
               pa_min_dist + ruins  + develop + roads + cellarea, 
@@ -87,6 +96,20 @@ summary(vis_model)
 modplot(vis_model)
 coefplot(vis_model, decreasing = TRUE)
 car::vif(vis_model)
+
+# plotting fitted values annd residuals
+modcheck <- pred_scaled
+modcheck$fitted <- vis_model$fitted.values
+modcheck$resids <- vis_model$residuals
+
+modchecksp <- aoi_viz_exp %>% 
+  dplyr::select(pid, geometry) %>%
+  left_join(modcheck, by = "pid")
+
+ggplot(modchecksp) + geom_sf(aes(fill = vis_log), size = .1)
+ggplot(modchecksp) + geom_sf(aes(fill = fitted), size = .1)
+ggplot(modchecksp) + geom_sf(aes(fill = resids), size = .1) + scale_fill_distiller(palette = "RdBu")
+
 
 
 # plotting indiv relationships
@@ -99,11 +122,13 @@ ggplot(pred_small) +
 ggplot(pred_small) +
   geom_point(aes(x = jitter(precip), y = vis_log), alpha = .2)
 
+
+
 ### Ok. I'd like to get a marginal effect plot for temperature
 # First, need to create a df that has mean values for everything else, but a range for temp.
 # (also, will need to retransform out of the scaled values)
 #... actually, since I'm not comparing magnitudes right now, I'll just rebuild the model using raw values and predict from that
-vis_model_raw <- lm(vis_log ~ country + prop_coral + mangrove + beach + forest + temp + I(temp^2) + 
+vis_model_raw <- lm(vis_log ~ country + coral_prop + mangrove + beach + forest_prop + temp + I(temp^2) + 
                       hotdays + precip  + 
                       wildlife +
                       pa_min_dist + ruins  + develop + roads + cellarea, 

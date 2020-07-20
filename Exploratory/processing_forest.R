@@ -1,3 +1,8 @@
+
+
+############ DOES NOT WORK ##############
+### Follow directions in `processing_forest_coral.md` instead
+
 ## Creating a forest footprint
 ## Reads in LULC rasters and extracts forest
 ## Consider: whether I want to write out rasters or shapes
