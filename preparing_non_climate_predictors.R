@@ -60,10 +60,6 @@ ruins <- read_sf("GIS/Predictors/Baseline_Inputs/ProjectedForInvestValid/archaeo
 roads <- read_sf("GIS/Predictors/Baseline_Inputs/ProjectedForInvestValid/roads_MAR_clip_32616.shp")
 develop <- read_sf("GIS/Predictors/Baseline_Inputs/ProjectedForInvestValid/lulc_developed_national_baseline_32616.shp")
 
-# not running coral because I think I need a new datasource/workflow
-# Coral
-#coral <- read_sf("GIS/Predictors/Coral/coral_reef_aoi.shp")
-
 # Ports / Air
 ports_air <- read_sf("GIS/Predictors/Baseline_Inputs/ProjectedForInvestValid/ports_air_32616.shp")
 
@@ -76,25 +72,42 @@ aoi <- aoi %>%
 
 # cleanup coral and forest
 # note that baseline_mean is the mean of the binary coral raster w/in the hex. So, it ends up being proportion of the 
-# hex covered by the footprint
+# hex covered by the footprint ## WRONG. This only works if the raster covers the entire extent of the AOI, which mine don't
+## Especially wrong for coral
 # Also grabbing MPA info from this layer
+
+# figuring out a conversion between area and number of raster cells, to calculate the true proportions
+# Note that this is approximate, since the number of raster cells per hex changes as you go south due to 
+# my projection. But, close enough
+mult_calcs <- forest %>%
+  filter(!is.na(baseline_c)) %>%
+  arrange(desc(baseline_c)) %>%
+  mutate(multiplier = baseline_c/area) %>%
+  filter(baseline_c >= 23990) # this looks like the smallest number of cells in a full hex
+#summary(mult_calcs)
+#mult_calcs
+multiplier <- median(mult_calcs$multiplier)
+
+# ok. So area * 0.00111 should give me the number of raster cells that could fit in that hex
+# And then the sum of cells that are forest, divided by the number of cells in the area, gives 
+# me proportion coverage
+forest_pid <- forest %>%
+  st_set_geometry(NULL) %>%
+  mutate(forest_prop = baseline_s / (area*multiplier),
+         forest_prop = if_else(forest_prop > 1, 1, forest_prop)) %>%
+  dplyr::select(pid, forest_prop)
+
+#ggplot(forest_pid) + geom_sf(aes(fill = forest_prop))
+
+# do the same for coral
+coral
 coral_pid <- coral %>% 
   st_set_geometry(NULL) %>%
-  mutate(coral_prop = if_else(is.na(baseline_mean), 0, baseline_mean)) %>%
+  mutate(coral_prop = if_else(is.na(baseline_sum), 0, baseline_sum / (area*multiplier)))  %>%
   dplyr::select(pid, coral_prop)
 
 # TODO: write this out as a geojson in the future and standardize naming
-# For now, note that "baseline_s" is the baseline_sum of the binary coastal forest raster in the hex. 
-# So, I'm counting coastal forest as "present" if there are 10 or more 30x30m raster cells classified
-# as coastal forest within the hex. I'm using 10 in order to drop places that I think might be random noise
-# (a full size hex has 24,091 raster cells inside it)
-forest_pid <- forest %>%
-  st_set_geometry(NULL) %>%
-  mutate(forest = if_else(baseline_s > 10, 1, 0),
-         forest_prop = if_else(is.na(baseline_m), 0, baseline_m)) %>%
-  dplyr::select(pid, forest, forest_prop)
 
-ggplot(forest) + geom_sf(aes(fill = baseline_m))
 # Run Presence/Absence
 # note that I tried to use my PresAbsFunc in a loop, but it breaks the nice "{predName}" functionality
 

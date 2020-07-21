@@ -22,7 +22,7 @@ setwd("~/Documents/MAR/mar_tourism/Data/")
 
 # read in the prepared predictors
 aoi_viz_exp <- read_sf("../../ModelRuns/baseline_20200715/aoi_viz_exp.shp")
-predictors <- read_csv("NonClimatePredictors_20200720.csv")
+predictors <- read_csv("NonClimatePredictors_20200721.csv")
 climatepreds <- read_csv("Future_Climate_RCP85_2050s_and_Current.csv")
 
 est_vis <- aoi_viz_exp %>%
