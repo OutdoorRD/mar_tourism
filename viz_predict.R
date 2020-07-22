@@ -10,6 +10,8 @@
 library(tidyverse)
 library(sf)
 library(lwgeom)
+library(raster)
+library(fasterize)
 
 ## Need to: read in model object, existing predictors,
 ##    AOI, new data layer, run intersection to get model inputs,
@@ -38,6 +40,10 @@ climate <- "clim0" #Baseline climate = clim0; 25th perc = clim1; 75th perc = cli
 climshort <- "c0"
 
 newNonClimate <- read_csv(paste0("ROOT/ProtectForest/NonClimatePredictors_", country, "_", climshort, ".csv"))
+
+# import empty country raster
+country_rast <- raster(paste0("ROOT/CountryAOIs/", country, "_root_aoi.tif"))
+
 
 clim_post <- case_when(climate == "clim0" ~ "0",
                        climate == "clim1" ~ "25",
@@ -88,7 +94,7 @@ scen_climate_all
 
 scen_clim_data <- scen_climate_all %>%
   dplyr::select(country, 
-                coral_prop = paste0("coral_prop", clim_post_c), 
+                coral_prop, #= paste0("coral_prop", clim_post_c), 
                 mangrove, 
                 beach,
                 forest_prop, 
@@ -136,19 +142,29 @@ country_clean <- modeled_country %>%
   dplyr::select(pid, CNTRY_NAME, est_vis, preds_base_clim_vis, preds_scen_clim_vis, diff_vis)
 
 # write out shp
-st_write(country_clean, paste0("ROOT/ProtectForest/IPMs/", country, "_", ipm, "_", aname, "_rec_", climate, ".geojson"), delete_dsn = TRUE)
+#st_write(country_clean, paste0("ROOT/ProtectForest/IPMs/", country, "_", ipm, "_", aname, "_rec_", climate, ".geojson"), delete_dsn = TRUE)
+
 
   
 ### Convert to Raster (todo: update with new empty raster that Jade shared)
-empty_rast <- raster(diff_sp, res = 500)
-empty_rast
-diff_rast <- rasterize(as(diff_sp, "Spatial"), empty_rast, field = "diff_vis")
-plot(diff_rast)
+#bz_rast
+#crs(bz_rast)
+#dataType(bz_rast)
+
+# raster type to float 32 is what matthew thinks will help
+# transform
+country_tran <- st_transform(country_clean, crs = 26916) 
+
+diff_rast <- fasterize(country_tran, country_rast, field = "diff_vis", background = 0)
+diff_rast
+#dataType(diff_rast) <- "FLT4S"
+#dataType(diff_rast)
+
 
 # write it out
 writeRaster(diff_rast, 
-            paste0("ROOT/ROOT_coral_test_20200519/protect_coral_Tourism_CVmodel/", ipm,"_", aname, "_rec_", climate, ".tif"), 
-            format = "GTiff")
+            paste0("ROOT/ProtectForest/IPMs/", country, "_", ipm,"_", aname, "_rec_", climate, ".tif"), 
+            format = "GTiff", datatype = "FLT4S", overwrite = TRUE)
 
 
 
