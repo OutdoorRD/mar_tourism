@@ -43,6 +43,10 @@ clim_post <- case_when(climate == "clim0" ~ "0",
                        climate == "clim1" ~ "25",
                        climate == "clim2" ~ "75")
 
+clim_post_c <- case_when(climate == "clim0" ~ "",
+                       climate == "clim1" ~ "25",
+                       climate == "clim2" ~ "75")
+
 # Now doing Belize protect coral
 #ipm <- "climate" #"ipm_06"
 #aname <- "noact" #"prot_corl"
@@ -58,7 +62,7 @@ base_climate_all <- baselines %>%
 ### Create tibble of baseline values in new climate
 base_clim_data <- base_climate_all %>%
   dplyr::select(country, 
-                coral_prop, #= corals_new, 
+                coral_prop = paste0("coral_prop", clim_post_c), 
                 mangrove, 
                 beach,
                 forest_prop, 
@@ -84,7 +88,7 @@ scen_climate_all
 
 scen_clim_data <- scen_climate_all %>%
   dplyr::select(country, 
-                coral_prop, #= corals_new, 
+                coral_prop = paste0("coral_prop", clim_post_c), 
                 mangrove, 
                 beach,
                 forest_prop, 
@@ -132,7 +136,7 @@ country_clean <- modeled_country %>%
   dplyr::select(pid, CNTRY_NAME, est_vis, preds_base_clim_vis, preds_scen_clim_vis, diff_vis)
 
 # write out shp
-st_write(country_clean, paste0("ROOT/ProtectForest/IPMs/", country, "_", ipm, "_", aname, "_rec_", climate, ".geojson"))
+st_write(country_clean, paste0("ROOT/ProtectForest/IPMs/", country, "_", ipm, "_", aname, "_rec_", climate, ".geojson"), delete_dsn = TRUE)
 
   
 ### Convert to Raster (todo: update with new empty raster that Jade shared)

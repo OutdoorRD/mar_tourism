@@ -63,6 +63,8 @@ develop <- read_sf("GIS/Predictors/Baseline_Inputs/ProjectedForInvestValid/lulc_
 # Ports / Air
 ports_air <- read_sf("GIS/Predictors/Baseline_Inputs/ProjectedForInvestValid/ports_air_32616.shp")
 
+multiplier <- pull(read.csv("mar_tourism/Data/areaTo30mCellMultiplier.csv"))
+
 # Work with AOI
 #all(st_is_valid(aoi))
 #crs(aoi)
@@ -76,19 +78,20 @@ aoi <- aoi %>%
 ## Especially wrong for coral
 # Also grabbing MPA info from this layer
 
+## Note: below was used to create the multiplier that is now read in above
 # figuring out a conversion between area and number of raster cells, to calculate the true proportions
 # Note that this is approximate, since the number of raster cells per hex changes as you go south due to 
 # my projection. But, close enough
-mult_calcs <- forest %>%
-  filter(!is.na(baseline_c)) %>%
-  arrange(desc(baseline_c)) %>%
-  mutate(multiplier = baseline_c/area) %>%
-  filter(baseline_c >= 23990) # this looks like the smallest number of cells in a full hex
+#mult_calcs <- forest %>%
+ # filter(!is.na(baseline_c)) %>%
+#  arrange(desc(baseline_c)) %>%
+ # mutate(multiplier = baseline_c/area) %>%
+  #filter(baseline_c >= 23990) # this looks like the smallest number of cells in a full hex
 #summary(mult_calcs)
 #mult_calcs
-multiplier <- median(mult_calcs$multiplier)
+#multiplier <- median(mult_calcs$multiplier)
 # write it out
-write.csv(multiplier, "mar_tourism/Data/areaTo30mCellMultiplier.csv", row.names = FALSE)
+#write.csv(multiplier, "mar_tourism/Data/areaTo30mCellMultiplier.csv", row.names = FALSE)
 
 # ok. So area * 0.00111 should give me the number of raster cells that could fit in that hex
 # And then the sum of cells that are forest, divided by the number of cells in the area, gives 
@@ -105,8 +108,10 @@ forest_pid <- forest %>%
 coral
 coral_pid <- coral %>% 
   st_set_geometry(NULL) %>%
-  mutate(coral_prop = if_else(is.na(baseline_sum), 0, baseline_sum / (area*multiplier)))  %>%
-  dplyr::select(pid, coral_prop)
+  mutate(coral_prop = if_else(is.na(c0_sum), 0, c0_sum / (area*multiplier)),
+         coral_prop25 = if_else(is.na(c1_sum), 0, c1_sum / (area*multiplier)),
+         coral_prop75 = if_else(is.na(c2_sum), 0, c2_sum / (area*multiplier))) %>%
+  dplyr::select(pid, coral_prop, coral_prop25, coral_prop75)
 
 # TODO: write this out as a geojson in the future and standardize naming
 

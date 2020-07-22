@@ -37,7 +37,7 @@ est_vis <- aoi_viz_exp %>%
 pred_small <- est_vis %>%
   left_join(predictors) %>%
   left_join(climatepreds %>% dplyr::select(pid, temp = temp0, hotdays = hotdays0, precip = precip0)) %>%
-  filter(!is.na(precip))
+  filter(!is.na(precip)) 
 summary(pred_small)
 
 # why do I have negative hotdays? Tracked this back to my rasterizing step.
@@ -136,11 +136,11 @@ vis_model_raw <- lm(vis_log ~ country + coral_prop + mangrove + beach + forest_p
 summary(vis_model_raw)
 
 # let's write out the predictors and model objects for both of these and track them
-#write_csv(pred_small, "Predictors_Baseline.csv")
-#write_csv(pred_scaled, "Predictors_Baseline_scaled.csv")
+write_csv(pred_small, "Predictors_Baseline.csv")
+write_csv(pred_scaled, "Predictors_Baseline_scaled.csv")
 
-#write_rds(vis_model, "../Models/viz_model_scaled.rds")
-#write_rds(vis_model_raw, "../Models/viz_model_raw.rds")
+write_rds(vis_model, "../Models/viz_model_scaled.rds")
+write_rds(vis_model_raw, "../Models/viz_model_raw.rds")
 
 
 
