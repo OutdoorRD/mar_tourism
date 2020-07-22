@@ -1,3 +1,7 @@
+###
+### Forked from preparing_non_climate_predictors.R on 7/21/20
+### Goal is to use this script to create the data to be read into viz_predict for the various Protect Forest scenarios
+
 ####
 #### Ok, let's make a really clean preparing_predictors script that only deals with my final selected preds
 #### The goal here is to be able to feed in new data, and then run all the intersections to output a csv
@@ -49,8 +53,8 @@ setwd("~/Documents/MAR")
 aoi <- read_sf("ModelRuns/baseline_20200715/T_AOI_v4_5k_32616_pid.shp")
 
 # read in variables that have already been intersected in QGIS (forest & coral)
-forest <- read_sf("GIS/Predictors/LULC/T_AOI_v4_5k_32616_coastal_forest.shp")
-coral <- read_sf("GIS/Predictors/Coral/CoralCover/0_mar/T_AOI_coral_baseline.geojson")
+forest <- read_sf("ROOT/ProtectForest/T_AOI_prot_fors_forest.geojson")
+coral <- read_sf("ROOT/ProtectForest/T_AOI_prot_fors_coral.geojson")
 
 # Presence/absence variables
 beach <- read_sf("GIS/Predictors/Baseline_Inputs/ProjectedForInvestValid/beach_from_geomorph_MAR_v4_shift_BZ_MX_32616.shp")
@@ -63,6 +67,9 @@ develop <- read_sf("GIS/Predictors/Baseline_Inputs/ProjectedForInvestValid/lulc_
 # Ports / Air
 ports_air <- read_sf("GIS/Predictors/Baseline_Inputs/ProjectedForInvestValid/ports_air_32616.shp")
 
+multiplier <- read_csv("mar_tourism/Data/areaTo30mCellMultiplier.csv")
+multiplier <- pull(multiplier)
+
 # Work with AOI
 #all(st_is_valid(aoi))
 #crs(aoi)
@@ -70,32 +77,23 @@ ports_air <- read_sf("GIS/Predictors/Baseline_Inputs/ProjectedForInvestValid/por
 aoi <- aoi %>%
   dplyr::select(pid, country = CNTRY_NAME, name_2, cellarea = area)
 
-# cleanup coral and forest
-# note that baseline_mean is the mean of the binary coral raster w/in the hex. So, it ends up being proportion of the 
-# hex covered by the footprint ## WRONG. This only works if the raster covers the entire extent of the AOI, which mine don't
-## Especially wrong for coral
-# Also grabbing MPA info from this layer
 
-# figuring out a conversion between area and number of raster cells, to calculate the true proportions
-# Note that this is approximate, since the number of raster cells per hex changes as you go south due to 
-# my projection. But, close enough
-mult_calcs <- forest %>%
-  filter(!is.na(baseline_c)) %>%
-  arrange(desc(baseline_c)) %>%
-  mutate(multiplier = baseline_c/area) %>%
-  filter(baseline_c >= 23990) # this looks like the smallest number of cells in a full hex
-#summary(mult_calcs)
-#mult_calcs
-multiplier <- median(mult_calcs$multiplier)
-# write it out
-write.csv(multiplier, "mar_tourism/Data/areaTo30mCellMultiplier.csv", row.names = FALSE)
+# set these
+country <- "hn"
+climate <- "c2"
+
+# cleanup coral and forest
 
 # ok. So area * 0.00111 should give me the number of raster cells that could fit in that hex
 # And then the sum of cells that are forest, divided by the number of cells in the area, gives 
 # me proportion coverage
+  
+
 forest_pid <- forest %>%
-  st_set_geometry(NULL) %>%
-  mutate(forest_prop = baseline_s / (area*multiplier),
+   st_set_geometry(NULL) %>%
+  left_join(aoi %>% st_set_geometry(NULL) %>% dplyr::select(pid, cellarea)) %>%
+  dplyr::select(pid, cellarea, baseline_s = paste0(country, "_sum")) %>%
+  mutate(forest_prop = if_else(is.na(baseline_s), 0, baseline_s / (cellarea*multiplier)),
          forest_prop = if_else(forest_prop > 1, 1, forest_prop)) %>%
   dplyr::select(pid, forest_prop)
 
@@ -105,8 +103,12 @@ forest_pid <- forest %>%
 coral
 coral_pid <- coral %>% 
   st_set_geometry(NULL) %>%
-  mutate(coral_prop = if_else(is.na(baseline_sum), 0, baseline_sum / (area*multiplier)))  %>%
+  left_join(aoi %>% st_set_geometry(NULL) %>% dplyr::select(pid, cellarea)) %>%
+  dplyr::select(pid, cellarea, baseline_sum = paste0(country, "_", climate, "_sum")) %>%
+  mutate(coral_prop = if_else(is.na(baseline_sum), 0, baseline_sum / (cellarea*multiplier)))  %>%
   dplyr::select(pid, coral_prop)
+
+#ggplot(coral_pid) + geom_sf(aes(fill = coral_prop))
 
 # TODO: write this out as a geojson in the future and standardize naming
 
@@ -148,8 +150,8 @@ predictors
 
 
     ## Write it out
-write_sf(predictors, paste0("mar_tourism/Data/NonClimatePredictors_", dddd, ".geojson"), delete_dsn = TRUE)
-write_csv(predictors %>% st_set_geometry(NULL), paste0("mar_tourism/Data/NonClimatePredictors_", dddd, ".csv"))
+write_sf(predictors, paste0("ROOT/ProtectForest/NonClimatePredictors_", country, "_", climate, ".geojson"))
+write_csv(predictors %>% st_set_geometry(NULL), paste0("ROOT/ProtectForest/NonClimatePredictors_", country, "_", climate, ".csv"))
 
 
 

@@ -25,108 +25,114 @@ setwd("~/Documents/MAR/")
 baselines <- read_csv("mar_tourism/Data/Predictors_Baseline.csv")
 climate_vals <- read_csv("mar_tourism/Data/Future_Climate_RCP85_2050s_and_Current.csv")
 viz_model_raw <- read_rds("mar_tourism/Models/viz_model_raw.rds")
-aoi <- read_sf("GIS/AOI/AOI_v3/Intersected/T_AOI_intersected_pid_32616_no_slivers.shp")
+aoi <- read_sf("ModelRuns/baseline_20200715/T_AOI_v4_5k_32616_pid.shp")
 
 ## Getting oriented in naming scheme
 
-# Starting with Belize Restore Coral
-country <- "Belize"
-#ipm <- "ipm_05" #Restore Coral
-#aname <- "rest_corl"
-climate <- "clim2" #Baseline climate = clim0; 25th perc = clim1; 75th perc = clim2
-#coral_new <- read_sf("ROOT/ROOT_coral_test_20200519/restore_coral_Tourism_CVmodel/MAR_coral_WGS8416N_erase_restored_areasBZ.shp")
+# Starting with Belize Protect forest
+country <- "bz"
+countryLong <- "Belize"
+ipm <- "ipm_03" #Protect forest
+aname <- "prot_fors"
+climate <- "clim0" #Baseline climate = clim0; 25th perc = clim1; 75th perc = clim2
+climshort <- "c0"
 
-# Now doing Belize protect coral
-ipm <- "climate" #"imp_06"
-aname <- "noact" #"prot_corl"
-#coral_new <- read_sf("ROOT/ROOT_coral_test_20200519/protect_coral_Tourism_CVmodel/MAR_coral_WGS8416N_eraseBelize.shp")
+newNonClimate <- read_csv(paste0("ROOT/ProtectForest/NonClimatePredictors_", country, "_", climshort, ".csv"))
 
-#### Joining climate onto baselines
-base_climate <- baselines %>%
-  left_join(climate_vals, by = "pid")
-clim_post <- case_when(climate == "clim0" ~ "",
+clim_post <- case_when(climate == "clim0" ~ "0",
                        climate == "clim1" ~ "25",
                        climate == "clim2" ~ "75")
 
+# Now doing Belize protect coral
+#ipm <- "climate" #"ipm_06"
+#aname <- "noact" #"prot_corl"
+#coral_new <- read_sf("ROOT/ROOT_coral_test_20200519/protect_coral_Tourism_CVmodel/MAR_coral_WGS8416N_eraseBelize.shp")
 
-##### Coral transforms (hopefully we want this to be in a "preparing_predictors_clean.R" script only, not here) ####
-crs(coral_new)
-coral_valid <- st_make_valid(coral_new)
-#coral
-## intersect corals with aoi
-# reproject and make valid
-#corals_32 <- st_transform(corals_full, crs = 32616)
-#corals_valid <- st_make_valid(corals_32)
-
-corals_int <- st_intersection(aoi, coral_valid)
-
-corals_pids <- corals_int$pid
-
-# make a newdata frame
-pred2 <- base_climate %>%
-  mutate(corals_new = if_else(pid %in% corals_pids, 1, 0))
-
-ggplot(pred2) +
-  geom_point(aes(x = jitter(corals), y = jitter(corals_new)))
-###################
-
-#### Create shapefile of fitted values (corals_full equivalent)
-## Not rerunning the model, since I'm assuming that corals_full is what I built it with
 modeled <- baselines %>%
   dplyr::select(pid, vis_log, est_vis) 
 
-modeled$fitted <- viz_model_raw$fitted.values
-modeled$fitted_vis <- expm1(modeled$fitted)
-modeled
+#### Joining climate onto baselines
+base_climate_all <- baselines %>%
+  left_join(climate_vals, by = "pid")
 
-# build newdata frame
-
-newdata <- base_climate %>%
+### Create tibble of baseline values in new climate
+base_clim_data <- base_climate_all %>%
   dplyr::select(country, 
-         prop_coral, #= corals_new, 
-         mangrove, 
-         beach,
-         forest, 
-         temp = paste0("temp", clim_post), 
-         hotdays = paste0("hotdays", clim_post), 
-         precip = paste0("precip", clim_post), 
-         wildlife,
-         pa_min_dist, 
-         ruins, 
-         develop, 
-         roads,
-         cellarea)
+                coral_prop, #= corals_new, 
+                mangrove, 
+                beach,
+                forest_prop, 
+                temp = paste0("temp", clim_post), 
+                hotdays = paste0("hotdays", clim_post), 
+                precip = paste0("precip", clim_post), 
+                wildlife,
+                pa_min_dist, 
+                ruins, 
+                develop, 
+                roads,
+                cellarea)
 
-preds <- predict(viz_model_raw, newdata = newdata)
-modeled$preds <- preds
-modeled$preds_vis <- expm1(preds)
+preds_base_clim <- predict(viz_model_raw, newdata = base_clim_data)
+modeled$preds_base_clim <- preds_base_clim
+modeled$preds_base_clim_vis <- expm1(preds_base_clim)
 modeled
+
+# Create tibble of SCENARIO data in new climate
+scen_climate_all <- newNonClimate %>%
+  left_join(climate_vals, by = "pid")
+scen_climate_all
+
+scen_clim_data <- scen_climate_all %>%
+  dplyr::select(country, 
+                coral_prop, #= corals_new, 
+                mangrove, 
+                beach,
+                forest_prop, 
+                temp = paste0("temp", clim_post), 
+                hotdays = paste0("hotdays", clim_post), 
+                precip = paste0("precip", clim_post), 
+                wildlife,
+                pa_min_dist, 
+                ruins, 
+                develop, 
+                roads,
+                cellarea)
+
+preds_scen_clim <- predict(viz_model_raw, newdata = scen_clim_data)
+modeled$preds_scen_clim <- preds_scen_clim
+modeled$preds_scen_clim_vis <- expm1(preds_scen_clim)
+modeled
+
+
 
 # calculate difference
 modeled <- modeled %>%
-  mutate(diff_vis = round(preds_vis - fitted_vis, 2)) # need to be careful about this line and what it means for each scenario
+  mutate(diff_vis = round(preds_base_clim_vis - preds_scen_clim_vis, 2)) # need to be careful about this line and what it means for each scenario
 modeled
 
 # join to spatial 
 modeled_sp <- aoi %>%
-  dplyr::select(pid, NAME) %>%
+  dplyr::select(pid, CNTRY_NAME) %>%
   left_join(modeled, by = "pid")
 
 ggplot(modeled_sp) +
-  geom_sf(aes(fill = diff_vis))
+  geom_sf(aes(fill = diff_vis), size = .1)
 
 # subset to country
-modeled_country <- modeled_sp #%>% filter(NAME == country)
+modeled_country <- modeled_sp %>% filter(CNTRY_NAME == countryLong)
 
 # check it out
 ggplot(modeled_country) +
   geom_sf(aes(fill = diff_vis))
 
-## Extract just the difference and turn it into a raster
-diff_sp <- modeled_country %>% dplyr::select(diff_vis)
+modeled_country
+
+## Extract the modeled estimates and difference and write it out
+country_clean <- modeled_country %>%
+  dplyr::select(pid, CNTRY_NAME, est_vis, preds_base_clim_vis, preds_scen_clim_vis, diff_vis)
 
 # write out shp
-st_write(diff_sp, paste0("Scenarios/Climate/", ipm, "_", aname, "_rec_", climate, ".shp"))
+st_write(country_clean, paste0("ROOT/ProtectForest/IPMs/", country, "_", ipm, "_", aname, "_rec_", climate, ".geojson"))
 
   
 ### Convert to Raster (todo: update with new empty raster that Jade shared)
