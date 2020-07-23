@@ -41,9 +41,9 @@ climshort <- "c0"
 
 newNonClimate <- read_csv(paste0("ROOT/ProtectForest/NonClimatePredictors_", country, "_", climshort, ".csv"))
 
-# import empty country raster
+# import empty country raster & country aoi outline
 country_rast <- raster(paste0("ROOT/CountryAOIs/", country, "_root_aoi.tif"))
-
+country_sf <- read_sf(paste0("ROOT/CountryAOIs/", country, "_root_aoi.shp"))
 
 clim_post <- case_when(climate == "clim0" ~ "0",
                        climate == "clim1" ~ "25",
@@ -150,6 +150,7 @@ country_clean <- modeled_country %>%
 #bz_rast
 #crs(bz_rast)
 #dataType(bz_rast)
+#plot(country_rast)
 
 # raster type to float 32 is what matthew thinks will help
 # transform
@@ -157,12 +158,18 @@ country_tran <- st_transform(country_clean, crs = 26916)
 
 diff_rast <- fasterize(country_tran, country_rast, field = "diff_vis", background = 0)
 diff_rast
+plot(diff_rast)
 #dataType(diff_rast) <- "FLT4S"
 #dataType(diff_rast)
 
+# mask it
+diff_masked <- mask(diff_rast, mask = country_sf, datatype = "FLT4S")
+diff_masked
+
+#writeRaster(diff_masked, "ROOT/ProtectForest/IPMs/test.tif", format = "GTiff", datatype = "FLT4S", overwrite = TRUE)
 
 # write it out
-writeRaster(diff_rast, 
+writeRaster(diff_masked, 
             paste0("ROOT/ProtectForest/IPMs/", country, "_", ipm,"_", aname, "_rec_", climate, ".tif"), 
             format = "GTiff", datatype = "FLT4S", overwrite = TRUE)
 
