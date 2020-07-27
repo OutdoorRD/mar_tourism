@@ -32,7 +32,8 @@ aoi <- read_sf("ModelRuns/baseline_20200715/T_AOI_v4_5k_32616_pid.shp")
 
 ## Getting oriented in naming scheme
 
-aname <- "prot_mang"
+aname <- "prot_corl"
+anameLong <- "ProtectCoral"
 climate <- "clim1" #Baseline climate = clim0; 25th perc = clim1; 75th perc = clim2
 climshort <- "c1"
 
@@ -93,7 +94,7 @@ if(aname == "prot_mang"){
 } else {
   print("Error: Check that the protect scenario is correct and coded: scen_clim_data not created")
 }
-
+summary(scen_clim_data)
 
 #scen_clim_data <- scen_climate_all %>%
  # dplyr::select(country, 
@@ -135,9 +136,10 @@ ggplot(modeled_sp) +
 ### Looping through the countries ###
 # note that the ipm code changes, so reference the ProtectMangrove README.md to find them (or the ROOT data tracking spreadsheet)
 
-country <- "bz"
-countryLong <- "Belize"
-ipm <- "ipm_06" # mx = 02, bz = 06, gt = 06, hn = 10 for ProtectMangrove
+country <- "mx"
+countryLong <- "Mexico"
+ipm <- "ipm_06" # ProtectMangrove: mx = 02, bz = 06, gt = 06, hn = 10 
+# ProtectCoral: mx = 06, bz = 08, hn = 15
 
 # import empty country raster & country aoi outline
 country_rast <- raster(paste0("ROOT/CountryAOIs/", country, "_root_aoi.tif"))
@@ -159,7 +161,7 @@ country_clean <- modeled_country %>%
   dplyr::select(pid, CNTRY_NAME, est_vis, preds_base_clim_vis, preds_scen_clim_vis, diff_vis)
 
 # write out shp
-st_write(country_clean, paste0("ROOT/ProtectMangrove/IPMs/", country, "_", ipm, "_", aname, "_rec_", climate, ".geojson"))#, delete_dsn = TRUE)
+st_write(country_clean, paste0("ROOT/", anameLong, "/IPMs/", country, "_", ipm, "_", aname, "_rec_", climate, ".geojson"))#, delete_dsn = TRUE)
 
 
   
@@ -182,7 +184,7 @@ diff_masked
 
 # write it out
 writeRaster(diff_masked, 
-            paste0("ROOT/ProtectMangrove/IPMs/", country, "_", ipm,"_", aname, "_rec_", climate, ".tif"), 
+            paste0("ROOT/", anameLong, "/IPMs/", country, "_", ipm,"_", aname, "_rec_", climate, ".tif"), 
             format = "GTiff", datatype = "FLT4S", overwrite = TRUE)
 
 
