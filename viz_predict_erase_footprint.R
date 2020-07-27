@@ -1,11 +1,12 @@
 #####
 ### Using the Viz Model to predict Viz under different scenarios
-###
-### First pass test using the corals layer that Jess created
-### 4/20/20 SGW
+### This script is optimized for "protect" scenarios that simply remove the entire 
+###  footprint of the habitat (mangroves, coral, others?).
+### IS NOT APPROPRIATE for protect forest, which doesn't simply remove the entire footprint
 
-### Updated 5/19 for new corals tests - also working to generalize
-### 7/1 Adding climate
+## Code has been used to create the mangrove scnearios, and should be ready for protect coral
+
+### Forked from viz_predict.R on 7/27/20
 
 library(tidyverse)
 library(sf)
@@ -31,32 +32,20 @@ aoi <- read_sf("ModelRuns/baseline_20200715/T_AOI_v4_5k_32616_pid.shp")
 
 ## Getting oriented in naming scheme
 
-# Starting with Belize Protect forest
-country <- "hn"
-countryLong <- "Honduras"
-ipm <- "ipm_03" #Protect forest
-aname <- "prot_fors"
-climate <- "clim2" #Baseline climate = clim0; 25th perc = clim1; 75th perc = clim2
-climshort <- "c2"
+aname <- "prot_mang"
+climate <- "clim1" #Baseline climate = clim0; 25th perc = clim1; 75th perc = clim2
+climshort <- "c1"
 
-newNonClimate <- read_csv(paste0("ROOT/ProtectForest/NonClimatePredictors_", country, "_", climshort, ".csv"))
-
-# import empty country raster & country aoi outline
-country_rast <- raster(paste0("ROOT/CountryAOIs/", country, "_root_aoi.tif"))
-country_sf <- read_sf(paste0("ROOT/CountryAOIs/", country, "_root_aoi.shp"))
+#newNonClimate <- read_csv(paste0("ROOT/ProtectForest/NonClimatePredictors_", country, "_", climshort, ".csv"))
 
 clim_post <- case_when(climate == "clim0" ~ "0",
                        climate == "clim1" ~ "25",
                        climate == "clim2" ~ "75")
 
+# create a special code for coral
 clim_post_c <- case_when(climate == "clim0" ~ "",
                        climate == "clim1" ~ "25",
                        climate == "clim2" ~ "75")
-
-# Now doing Belize protect coral
-#ipm <- "climate" #"ipm_06"
-#aname <- "noact" #"prot_corl"
-#coral_new <- read_sf("ROOT/ROOT_coral_test_20200519/protect_coral_Tourism_CVmodel/MAR_coral_WGS8416N_eraseBelize.shp")
 
 modeled <- baselines %>%
   dplyr::select(pid, vis_log, est_vis) 
@@ -88,25 +77,39 @@ modeled$preds_base_clim_vis <- expm1(preds_base_clim)
 modeled
 
 # Create tibble of SCENARIO data in new climate
-scen_climate_all <- newNonClimate %>%
-  left_join(climate_vals, by = "pid")
-scen_climate_all
+## Don't need to read in any new data, since we can just overwrite all the mangrove
+## pids with zero
 
-scen_clim_data <- scen_climate_all %>%
-  dplyr::select(country, 
-                coral_prop, #= paste0("coral_prop", clim_post_c), 
-                mangrove, 
-                beach,
-                forest_prop, 
-                temp = paste0("temp", clim_post), 
-                hotdays = paste0("hotdays", clim_post), 
-                precip = paste0("precip", clim_post), 
-                wildlife,
-                pa_min_dist, 
-                ruins, 
-                develop, 
-                roads,
-                cellarea)
+#scen_climate_all <- newNonClimate %>%
+ # left_join(climate_vals, by = "pid")
+#scen_climate_all
+
+if(aname == "prot_mang"){
+  scen_clim_data <- base_clim_data %>%
+    mutate(mangrove = 0)
+}else if (aname == "prot_corl"){
+  scen_clim_data <- base_clim_data %>%
+    mutate(coral_prop = 0)
+} else {
+  print("Error: Check that the protect scenario is correct and coded: scen_clim_data not created")
+}
+
+
+#scen_clim_data <- scen_climate_all %>%
+ # dplyr::select(country, 
+  #              coral_prop, #= paste0("coral_prop", clim_post_c), 
+   #             mangrove, 
+    #            beach,
+     #           forest_prop, 
+      #          temp = paste0("temp", clim_post), 
+       #         hotdays = paste0("hotdays", clim_post), 
+        #        precip = paste0("precip", clim_post), 
+         #       wildlife,
+          #      pa_min_dist, 
+           #     ruins, 
+            #    develop, 
+             #   roads,
+              #  cellarea)
 
 preds_scen_clim <- predict(viz_model_raw, newdata = scen_clim_data)
 modeled$preds_scen_clim <- preds_scen_clim
@@ -128,6 +131,19 @@ modeled_sp <- aoi %>%
 ggplot(modeled_sp) +
   geom_sf(aes(fill = diff_vis), size = .1)
 
+
+### Looping through the countries ###
+# note that the ipm code changes, so reference the ProtectMangrove README.md to find them (or the ROOT data tracking spreadsheet)
+
+country <- "bz"
+countryLong <- "Belize"
+ipm <- "ipm_06" # mx = 02, bz = 06, gt = 06, hn = 10 for ProtectMangrove
+
+# import empty country raster & country aoi outline
+country_rast <- raster(paste0("ROOT/CountryAOIs/", country, "_root_aoi.tif"))
+country_sf <- read_sf(paste0("ROOT/CountryAOIs/", country, "_root_aoi.shp"))
+
+
 # subset to country
 modeled_country <- modeled_sp %>% filter(CNTRY_NAME == countryLong)
 
@@ -143,15 +159,11 @@ country_clean <- modeled_country %>%
   dplyr::select(pid, CNTRY_NAME, est_vis, preds_base_clim_vis, preds_scen_clim_vis, diff_vis)
 
 # write out shp
-st_write(country_clean, paste0("ROOT/ProtectForest/IPMs/", country, "_", ipm, "_", aname, "_rec_", climate, ".geojson"))#, delete_dsn = TRUE)
+st_write(country_clean, paste0("ROOT/ProtectMangrove/IPMs/", country, "_", ipm, "_", aname, "_rec_", climate, ".geojson"))#, delete_dsn = TRUE)
 
 
   
-### Convert to Raster (todo: update with new empty raster that Jade shared)
-#bz_rast
-#crs(bz_rast)
-#dataType(bz_rast)
-#plot(country_rast)
+### Convert to Raster 
 
 # raster type to float 32 is what matthew thinks will help
 # transform
@@ -168,11 +180,9 @@ diff_rast
 diff_masked <- mask(diff_rast, mask = country_sf, datatype = "FLT4S")
 diff_masked
 
-#writeRaster(diff_masked, "ROOT/ProtectForest/IPMs/test.tif", format = "GTiff", datatype = "FLT4S", overwrite = TRUE)
-
 # write it out
 writeRaster(diff_masked, 
-            paste0("ROOT/ProtectForest/IPMs/", country, "_", ipm,"_", aname, "_rec_", climate, ".tif"), 
+            paste0("ROOT/ProtectMangrove/IPMs/", country, "_", ipm,"_", aname, "_rec_", climate, ".tif"), 
             format = "GTiff", datatype = "FLT4S", overwrite = TRUE)
 
 
