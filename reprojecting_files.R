@@ -11,10 +11,13 @@ library(raster)
 #library(fasterize)
 library(tidyverse)
 
-setwd("~/Documents/MAR/GIS/Predictors/Baseline_Inputs/")
+setwd("~/Documents/MAR/GIS/Predictors/Nature/Mangrove_Degradation_Sensitivity_Analysis/Degraded_Mangrove_footprints/")
 
 # create list of files to transform
-shpfiles <- c("Mangrove_v5_updated2019")
+shpfiles <- c("Larger_Degraded_footprint/MARmangrove_degraded_lessconservative",
+              "Larger_Degraded_footprint/MARmangrove_healthy_lessconservative",
+              "Smaller_Degraded_footprint/MARmangrove_healthy_moreconservative",
+              "Smaller_Degraded_footprint/MARmangrove_degraded_moreconservative")
 
 #file1 <- st_read("airports_MAR.shp")
 #all(st_is_valid(file1)) == FALSE

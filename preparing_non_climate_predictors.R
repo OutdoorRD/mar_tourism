@@ -49,12 +49,12 @@ setwd("~/Documents/MAR")
 aoi <- read_sf("ModelRuns/baseline_20200715/T_AOI_v4_5k_32616_pid.shp")
 
 # read in variables that have already been intersected in QGIS (forest & coral)
-forest <- read_sf("GIS/Predictors/LULC/T_AOI_v4_5k_32616_coastal_forest.shp")
+forest <- read_sf("GIS/Predictors/LULC/Forest_Created/T_AOI_v4_5k_32616_coastal_forest.shp")
 coral <- read_sf("GIS/Predictors/Coral/CoralCover/0_mar/T_AOI_coral_baseline.geojson")
 
 # Presence/absence variables
 beach <- read_sf("GIS/Predictors/Baseline_Inputs/ProjectedForInvestValid/beach_from_geomorph_MAR_v4_shift_BZ_MX_32616.shp")
-mangrove <- read_sf("GIS/Predictors/Baseline_Inputs/ProjectedForInvestValid/Mangrove_v5_updated2019_32616.shp")
+#mangrove <- read_sf("GIS/Predictors/Baseline_Inputs/ProjectedForInvestValid/Mangrove_v5_updated2019_32616.shp")
 wildlife <- read_sf("GIS/Predictors/Baseline_Inputs/ProjectedForInvestValid/wildlife3_32616.shp")
 ruins <- read_sf("GIS/Predictors/Baseline_Inputs/ProjectedForInvestValid/archaeological_sites_combined_32616.shp")
 roads <- read_sf("GIS/Predictors/Baseline_Inputs/ProjectedForInvestValid/roads_MAR_clip_32616.shp")
@@ -119,7 +119,7 @@ coral_pid <- coral %>%
 # note that I tried to use my PresAbsFunc in a loop, but it breaks the nice "{predName}" functionality
 
 beach_pid <- PresAbsFunc(beach, aoi)
-mangrove_pid <- PresAbsFunc(mangrove, aoi) # slow
+#mangrove_pid <- PresAbsFunc(mangrove, aoi) # slow
 wildlife_pid <- PresAbsFunc(wildlife, aoi)
 ruins_pid <- PresAbsFunc(ruins, aoi)
 roads_pid <- PresAbsFunc(roads, aoi)
@@ -131,7 +131,7 @@ predictors <- aoi %>%
   left_join(coral_pid) %>%
   left_join(forest_pid) %>%
   left_join(beach_pid) %>%
-  left_join(mangrove_pid) %>%
+#  left_join(mangrove_pid) %>%
   left_join(wildlife_pid) %>%
   left_join(ruins_pid) %>%
   left_join(roads_pid) %>%
@@ -150,11 +150,99 @@ predictors$pa_min_dist <- pa_min_dist
 predictors
 #####
 
+########### Proportion of hex covered by mangroves #######
+### start with healthy mangroves, in more extreme option
+mangroves <- read_sf("GIS/Predictors/Nature/Mangrove_Degradation_Sensitivity_Analysis/Degraded_Mangrove_footprints/ProjectedForInvestValid/Larger_Degraded_footprint/MARmangrove_healthy_lessconservative_32616.shp")
+mangroves
 
+# intersect
+mangrove_int <- st_intersection(aoi, mangroves) # 
 
-    ## Write it out
-write_sf(predictors, paste0("mar_tourism/Data/NonClimatePredictors_", dddd, ".geojson"), delete_dsn = TRUE)
-write_csv(predictors %>% st_set_geometry(NULL), paste0("mar_tourism/Data/NonClimatePredictors_", dddd, ".csv"))
+# calculate the area of each intersected polygon (only includes mangrove)
+mangrove_int$area <- unclass(st_area(mangrove_int)) 
+mangrove_areas <- mangrove_int %>%
+  st_set_geometry(NULL) %>%
+  group_by(pid) %>%
+  summarise(mangrove_area = sum(area)) ## 
+
+preds_mangrove <- predictors %>%
+  left_join(mangrove_areas, by = "pid") %>%
+  mutate(prop_mangrove_lg = if_else(is.na(mangrove_area), 0, mangrove_area/cellarea)) %>%
+  dplyr::select(-mangrove_area)
+
+preds_mangrove
+ggplot(preds_mangrove) + geom_sf(aes(fill = prop_mangrove))
+
+### Repeat for degraded
+mangroves <- read_sf("GIS/Predictors/Nature/Mangrove_Degradation_Sensitivity_Analysis/Degraded_Mangrove_footprints/ProjectedForInvestValid/Larger_Degraded_footprint/MARmangrove_degraded_lessconservative_32616.shp")
+mangroves
+
+# intersect
+mangrove_int <- st_intersection(aoi, mangroves) # 
+
+# calculate the area of each intersected polygon (only includes mangrove)
+mangrove_int$area <- unclass(st_area(mangrove_int)) 
+mangrove_areas <- mangrove_int %>%
+  st_set_geometry(NULL) %>%
+  group_by(pid) %>%
+  summarise(mangrove_area = sum(area)) ## 
+
+preds_mangrove <- preds_mangrove %>%
+  left_join(mangrove_areas, by = "pid") %>%
+  mutate(prop_mangrove_deg_lg = if_else(is.na(mangrove_area), 0, mangrove_area/cellarea)) %>%
+  dplyr::select(-mangrove_area)
+
+###### Now for the smaller footprints
+
+### Repeat for degraded
+mangroves <- read_sf("GIS/Predictors/Nature/Mangrove_Degradation_Sensitivity_Analysis/Degraded_Mangrove_footprints/ProjectedForInvestValid/Smaller_Degraded_footprint/MARmangrove_degraded_moreconservative_32616.shp")
+mangroves
+
+# intersect
+mangrove_int <- st_intersection(aoi, mangroves) # 
+
+# calculate the area of each intersected polygon (only includes mangrove)
+mangrove_int$area <- unclass(st_area(mangrove_int)) 
+mangrove_areas <- mangrove_int %>%
+  st_set_geometry(NULL) %>%
+  group_by(pid) %>%
+  summarise(mangrove_area = sum(area)) ## 
+
+preds_mangrove <- preds_mangrove %>%
+  left_join(mangrove_areas, by = "pid") %>%
+  mutate(prop_mangrove_deg_sm = if_else(is.na(mangrove_area), 0, mangrove_area/cellarea)) %>%
+  dplyr::select(-mangrove_area)
+
+### Repeat for healthy
+mangroves <- read_sf("GIS/Predictors/Nature/Mangrove_Degradation_Sensitivity_Analysis/Degraded_Mangrove_footprints/ProjectedForInvestValid/Smaller_Degraded_footprint/MARmangrove_healthy_moreconservative_32616.shp")
+mangroves
+
+# intersect
+mangrove_int <- st_intersection(aoi, mangroves) # 
+
+# calculate the area of each intersected polygon (only includes mangrove)
+mangrove_int$area <- unclass(st_area(mangrove_int)) 
+mangrove_areas <- mangrove_int %>%
+  st_set_geometry(NULL) %>%
+  group_by(pid) %>%
+  summarise(mangrove_area = sum(area)) ## 
+
+preds_mangrove <- preds_mangrove %>%
+  left_join(mangrove_areas, by = "pid") %>%
+  mutate(prop_mangrove_sm = if_else(is.na(mangrove_area), 0, mangrove_area/cellarea)) %>%
+  dplyr::select(-mangrove_area)
+
+mangroves_test <- preds_mangrove %>%
+  st_drop_geometry %>%
+  dplyr::select(starts_with("prop_man"))
+library(corrgram)
+corrgram(mangroves_test, upper.panel = panel.pts, lower.panel = panel.cor)
+
+predictors <- preds_mangrove
+
+## Write it out
+write_sf(predictors, paste0("MangroveTest/mar_tourism/Data/NonClimatePredictors_", dddd, ".geojson"), delete_dsn = TRUE)
+write_csv(predictors %>% st_set_geometry(NULL), paste0("MangroveTest/mar_tourism/Data/NonClimatePredictors_", dddd, ".csv"))
 
 
 

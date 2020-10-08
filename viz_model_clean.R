@@ -18,11 +18,11 @@ modplot <- function(x){
   par(mfrow = c(1,1))
 }
 
-setwd("~/Documents/MAR/mar_tourism/Data/")
+setwd("~/Documents/MAR/MangroveTest/mar_tourism/Data/")
 
 # read in the prepared predictors
-aoi_viz_exp <- read_sf("../../ModelRuns/baseline_20200715/aoi_viz_exp.shp")
-predictors <- read_csv("NonClimatePredictors_20200721.csv")
+aoi_viz_exp <- read_sf("../../../ModelRuns/baseline_20200715/aoi_viz_exp.shp")
+predictors <- read_csv("NonClimatePredictors_20201008.csv")
 climatepreds <- read_csv("Future_Climate_RCP85_2050s_and_Current.csv")
 
 est_vis <- aoi_viz_exp %>%
@@ -85,7 +85,8 @@ pred_scaled <- pred_small %>%
          cellarea = scale_func(cellarea))
 summary(pred_scaled)
 
-vis_model <- lm(vis_log ~ country + coral_prop + mangrove + beach + forest_prop + temp + I(temp^2) + 
+vis_model <- lm(vis_log ~ country + coral_prop + prop_mangrove_lg + #prop_mangrove_deg_sm + 
+                  beach + forest_prop + temp + I(temp^2) + 
               hotdays + precip  + 
                 wildlife +
               pa_min_dist + ruins  + develop + roads + cellarea, 
