@@ -11,10 +11,12 @@ library(raster)
 #library(fasterize)
 library(tidyverse)
 
-setwd("~/Documents/MAR/GIS/Predictors/Baseline_Inputs/")
+#setwd("~/Documents/MAR/GIS/Predictors/Baseline_Inputs/")
+
+inpath <- "~/Documents/MAR/GIS/Predictors/Nature/MAR_mangrove_Oct2020/MAR_Mangrove_Layers/"
 
 # create list of files to transform
-shpfiles <- c("Mangrove_v5_updated2019")
+shpfiles <- c("MARwide_mangrove_healthy_footprint_Oct2020")
 
 #file1 <- st_read("airports_MAR.shp")
 #all(st_is_valid(file1)) == FALSE
@@ -25,7 +27,7 @@ shpfiles <- c("Mangrove_v5_updated2019")
 # st_zm removes any third dimensional data (z values)
 
 for(shpfile in shpfiles){
-  file1 <- st_read(paste0(shpfile, ".shp"))
+  file1 <- st_read(paste0(inpath, shpfile, ".shp"))
   flat <- st_zm(file1)
   if (all(st_is_valid(flat)) == FALSE) {
     flat <- st_make_valid(flat)
