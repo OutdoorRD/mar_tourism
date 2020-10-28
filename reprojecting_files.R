@@ -13,10 +13,11 @@ library(tidyverse)
 
 #setwd("~/Documents/MAR/GIS/Predictors/Baseline_Inputs/")
 
-inpath <- "~/Documents/MAR/GIS/Predictors/Nature/MAR_mangrove_Oct2020/MAR_Mangrove_Layers/"
+inpath <- "~/Documents/MAR/ROOT/04RestoreMangroves/MAR_mangrove_Oct2020/MAR_Mangrove_Layers/"
+outpath <- inpath
 
 # create list of files to transform
-shpfiles <- c("MARwide_mangrove_healthy_footprint_Oct2020")
+shpfiles <- c("MARwide_mangrove_restoration_footprint_Oct2020")
 
 #file1 <- st_read("airports_MAR.shp")
 #all(st_is_valid(file1)) == FALSE
@@ -33,7 +34,7 @@ for(shpfile in shpfiles){
     flat <- st_make_valid(flat)
   }
   trans <- st_transform(flat, crs = 32616)
-  st_write(trans, paste0("ProjectedForInvestValid/", shpfile, "_32616.shp"), delete_layer = TRUE)
+  st_write(trans, paste0(outpath, shpfile, "_32616.shp"), delete_layer = TRUE)
 }
 
 ggplot(trans) +geom_sf()

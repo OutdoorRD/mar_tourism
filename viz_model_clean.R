@@ -22,7 +22,7 @@ setwd("~/Documents/MAR/mar_tourism/Data/")
 
 # read in the prepared predictors
 aoi_viz_exp <- read_sf("../../ModelRuns/baseline_20200715/aoi_viz_exp.shp")
-predictors <- read_csv("NonClimatePredictors_20200721.csv")
+predictors <- read_csv("NonClimatePredictors_20201028.csv")
 climatepreds <- read_csv("Future_Climate_RCP85_2050s_and_Current.csv")
 
 est_vis <- aoi_viz_exp %>%
@@ -76,16 +76,11 @@ pred_scaled <- pred_small %>%
   mutate(temp = scale_func(temp),
          hotdays = scale_func(hotdays),
          precip = scale_func(precip),
-         #daysrain = scale_func(daysrain),
-         #C3P = scale_func(C3P),
-         #air_min_dist = scale_func(air_min_dist),
-         #ports_min_dist = scale_func(ports_min_dist),
-         #roads_min_dist = scale_func(roads_min_dist),
          pa_min_dist = scale_func(pa_min_dist),
          cellarea = scale_func(cellarea))
 summary(pred_scaled)
 
-vis_model <- lm(vis_log ~ country + coral_prop + mangrove + beach + forest_prop + temp + I(temp^2) + 
+vis_model <- lm(vis_log ~ country + coral_prop + mangrove_prop + beach + forest_prop + temp + I(temp^2) + 
               hotdays + precip  + 
                 wildlife +
               pa_min_dist + ruins  + develop + roads + cellarea, 
@@ -128,7 +123,7 @@ ggplot(pred_small) +
 # First, need to create a df that has mean values for everything else, but a range for temp.
 # (also, will need to retransform out of the scaled values)
 #... actually, since I'm not comparing magnitudes right now, I'll just rebuild the model using raw values and predict from that
-vis_model_raw <- lm(vis_log ~ country + coral_prop + mangrove + beach + forest_prop + temp + I(temp^2) + 
+vis_model_raw <- lm(vis_log ~ country + coral_prop + mangrove_prop + beach + forest_prop + temp + I(temp^2) + 
                       hotdays + precip  + 
                       wildlife +
                       pa_min_dist + ruins  + develop + roads + cellarea, 
