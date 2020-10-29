@@ -33,3 +33,4 @@ Coral steps
 4. Run zonal Statistics (as above)
   - Output column prefix: `bz_c0_`
   - Statistic: Sum
+  - NOTE: this will leave NULL values in some cells which don't overlap with the coral raster. This is ok - they're dealt with later in the `preparing_predictors.r` script

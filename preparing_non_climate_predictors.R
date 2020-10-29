@@ -50,7 +50,7 @@ aoi <- read_sf("ModelRuns/baseline_20200715/T_AOI_v4_5k_32616_pid.shp")
 
 # read in variables that have already been intersected in QGIS (forest & coral)
 forest <- read_sf("GIS/Predictors/LULC/Forest_Created/T_AOI_v4_5k_32616_coastal_forest.shp")
-coral <- read_sf("GIS/Predictors/Coral/CoralCover/0_mar/T_AOI_coral_baseline.geojson")
+coral <- read_sf("GIS/Predictors/Coral/CoralCover/0_mar/Version1/T_AOI_coral_baseline.geojson")
 
 # Presence/absence variables
 beach <- read_sf("GIS/Predictors/Baseline_Inputs/ProjectedForInvestValid/beach_from_geomorph_MAR_v4_shift_BZ_MX_32616.shp")
@@ -152,8 +152,9 @@ predictors
 
 
 ########### Proportion coverage of Mangrove #####
+
 # intersect
-mangrove_int <- st_intersection(aoi, mangrove) # 
+mangrove_int <- st_intersection(aoi, mangrove) 
 
 # calculate the area of each intersected polygon (only includes mangrove)
 mangrove_int$area <- unclass(st_area(mangrove_int)) 
