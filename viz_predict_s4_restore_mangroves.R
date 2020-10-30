@@ -39,8 +39,8 @@ countryLong <- "Belize"
 #ipm <- "ipm_04" 
 anum <- "04" #restore mangroves
 aname <- "rest_mang"
-climate <- "clim0" #Baseline climate = clim0; 25th perc = clim1; 75th perc = clim2
-climshort <- "c0"
+climate <- "clim2" #Baseline climate = clim0; 25th perc = clim1; 75th perc = clim2
+climshort <- "c2"
 
 ipm <- paste0("ipm_", anum)
 
@@ -196,7 +196,6 @@ summary(country_clean)
 diff_masked <- mask(diff_rast, mask = country_sf, datatype = "FLT4S")
 diff_masked
 
-#writeRaster(diff_masked, "ROOT/ProtectForest/IPMs/test.tif", format = "GTiff", datatype = "FLT4S", overwrite = TRUE)
 
 # write it out
 writeRaster(diff_masked, 
