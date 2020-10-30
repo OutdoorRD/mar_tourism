@@ -64,7 +64,8 @@ clim_post_c <- case_when(climate == "clim0" ~ "",
 #coral_new <- read_sf("ROOT/ROOT_coral_test_20200519/protect_coral_Tourism_CVmodel/MAR_coral_WGS8416N_eraseBelize.shp")
 
 modeled <- baselines %>%
-  dplyr::select(pid, vis_log, est_vis) 
+  dplyr::select(pid, vis_log, est_vis) %>%
+  arrange(pid)
 
 #### Joining climate onto baselines
 base_climate_all <- baselines %>%
@@ -72,7 +73,8 @@ base_climate_all <- baselines %>%
 
 ### Create tibble of baseline values in new climate
 base_clim_data <- base_climate_all %>%
-  dplyr::select(country, 
+  dplyr::select(pid,
+                country, 
                 coral_prop = paste0("coral_prop", clim_post_c), 
                 mangrove_prop, 
                 beach,
@@ -85,21 +87,26 @@ base_clim_data <- base_climate_all %>%
                 ruins, 
                 develop, 
                 roads,
-                cellarea)
+                cellarea) %>%
+  arrange(pid)
 
 preds_base_clim <- predict(viz_model_raw, newdata = base_clim_data)
 modeled$preds_base_clim <- preds_base_clim
-modeled$preds_base_clim_vis <- expm1(preds_base_clim)
+modeled$preds_base_clim_vis <- exp(preds_base_clim) # Note: I'm doing exp and not expm1 to avoid negative visitors 
+## TODO: examine the assumption above a bit more closely!
 modeled
+
 
 # Create tibble of SCENARIO data in new climate
 scen_climate_all <- newNonClimate %>%
   left_join(climate_vals, by = "pid")
 scen_climate_all
+base_climate_all
 
 scen_clim_data <- scen_climate_all %>%
-  dplyr::select(country, 
-                coral_prop, #= paste0("coral_prop", clim_post_c), 
+  dplyr::select(pid,
+                country, 
+                coral_prop = paste0("coral_prop", clim_post_c), 
                 mangrove_prop, 
                 beach,
                 forest_prop, 
@@ -111,19 +118,20 @@ scen_clim_data <- scen_climate_all %>%
                 ruins, 
                 develop, 
                 roads,
-                cellarea)
+                cellarea) %>%
+  arrange(pid)
 
 preds_scen_clim <- predict(viz_model_raw, newdata = scen_clim_data)
 modeled$preds_scen_clim <- preds_scen_clim
-modeled$preds_scen_clim_vis <- expm1(preds_scen_clim)
+modeled$preds_scen_clim_vis <- exp(preds_scen_clim)
 modeled
 
 
 
 # calculate difference
 modeled <- modeled %>%
-  mutate(diff_vis = round(preds_scen_clim_vis - preds_base_clim_vis, 2),
-         perc_change = 100*(preds_scen_clim_vis - preds_base_clim_vis) / preds_base_clim_vis) # ALWAYS - Now standardized
+  mutate(diff_vis = round(preds_scen_clim_vis - preds_base_clim_vis, 2), # ALWAYS - Now standardized
+         perc_change = 100*(preds_scen_clim_vis - preds_base_clim_vis) / preds_base_clim_vis) 
 modeled
 
 # join to spatial 
@@ -137,10 +145,15 @@ ggplot(modeled_sp %>% filter(diff_vis != 0)) +
 ggplot(modeled_sp %>% filter(diff_vis != 0)) +
   geom_sf(aes(fill = perc_change), size = .1)
 
-modeled_sp
+modeled_sp %>%
+  filter(diff_vis != 0) %>%
+  arrange(desc(perc_change))
+
+summary(modeled_sp)
+
 
 # let's write it out
-st_write(modeled_sp, paste0("ROOT/", anum, "_", aname, "/IPMs/MARwide_", ipm, "_", aname, "_rec_", climate, ".geojson"))
+st_write(modeled_sp, paste0("ROOT/", anum, "_", aname, "/IPMs/MARwide_", ipm, "_", aname, "_rec_", climate, ".geojson"), delete_dsn = TRUE)
 
 # subset to country
 modeled_country <- modeled_sp %>% filter(CNTRY_NAME == countryLong)
@@ -157,7 +170,7 @@ country_clean <- modeled_country %>%
   dplyr::select(pid, CNTRY_NAME, est_vis, preds_base_clim_vis, preds_scen_clim_vis, diff_vis)
 
 # write out shp
-st_write(country_clean, paste0("ROOT/", anum, "_", aname, "/IPMs/", country, "_", ipm, "_", aname, "_rec_", climate, ".geojson"))#, delete_dsn = TRUE)
+st_write(country_clean, paste0("ROOT/", anum, "_", aname, "/IPMs/", country, "_", ipm, "_", aname, "_rec_", climate, ".geojson"), delete_dsn = TRUE)
 
 
   
