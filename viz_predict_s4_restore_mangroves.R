@@ -34,8 +34,6 @@ aoi <- read_sf("ModelRuns/baseline_20200715/T_AOI_v4_5k_32616_pid.shp")
 ## Getting oriented in naming scheme
 
 # Starting with Belize restore mangroves
-country <- "bz"
-countryLong <- "Belize"
 #ipm <- "ipm_04" 
 anum <- "04" #restore mangroves
 aname <- "rest_mang"
@@ -46,9 +44,6 @@ ipm <- paste0("ipm_", anum)
 
 newNonClimate <- read_csv("mar_tourism/Data/Scenarios/s4_restore_mangroves_NonClimatePredictors_20201029.csv")
 
-# import empty country raster & country aoi outline
-country_rast <- raster(paste0("ROOT/CountryAOIs/", country, "_root_aoi.tif"))
-country_sf <- read_sf(paste0("ROOT/CountryAOIs/", country, "_root_aoi.shp"))
 
 clim_post <- case_when(climate == "clim0" ~ "0",
                        climate == "clim1" ~ "25",
@@ -58,10 +53,6 @@ clim_post_c <- case_when(climate == "clim0" ~ "",
                        climate == "clim1" ~ "25",
                        climate == "clim2" ~ "75")
 
-# Now doing Belize protect coral
-#ipm <- "climate" #"ipm_06"
-#aname <- "noact" #"prot_corl"
-#coral_new <- read_sf("ROOT/ROOT_coral_test_20200519/protect_coral_Tourism_CVmodel/MAR_coral_WGS8416N_eraseBelize.shp")
 
 modeled <- baselines %>%
   dplyr::select(pid, vis_log, est_vis) %>%
@@ -155,7 +146,19 @@ summary(modeled_sp)
 # let's write it out
 st_write(modeled_sp, paste0("ROOT/", anum, "_", aname, "/IPMs/MARwide_", ipm, "_", aname, "_rec_", climate, ".geojson"), delete_dsn = TRUE)
 
-# subset to country
+###############################################################################
+###### subset to country ######
+## TODO: break this into its own script?
+
+
+country <- "hn"
+countryLong <- "Honduras"
+
+# import empty country raster & country aoi outline
+country_rast <- raster(paste0("ROOT/CountryAOIs/", country, "_root_aoi.tif"))
+country_sf <- read_sf(paste0("ROOT/CountryAOIs/", country, "_root_aoi.shp"))
+
+
 modeled_country <- modeled_sp %>% filter(CNTRY_NAME == countryLong)
 
 # check it out
@@ -163,14 +166,14 @@ ggplot(modeled_country) +
   geom_sf(aes(fill = diff_vis))
 
 modeled_country
-summary(modeled_country$diff_vis)
+summary(modeled_country)
 
 ## Extract the modeled estimates and difference and write it out
 country_clean <- modeled_country %>%
   dplyr::select(pid, CNTRY_NAME, est_vis, preds_base_clim_vis, preds_scen_clim_vis, diff_vis)
 
 # write out shp
-st_write(country_clean, paste0("ROOT/", anum, "_", aname, "/IPMs/", country, "_", ipm, "_", aname, "_rec_", climate, ".geojson"), delete_dsn = TRUE)
+st_write(country_clean, paste0("ROOT/", anum, "_", aname, "/IPMs/", country, "_", ipm, "_", aname, "_rec_", climate, ".geojson"))#, delete_dsn = TRUE)
 
 
   
