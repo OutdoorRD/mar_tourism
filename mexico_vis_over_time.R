@@ -101,7 +101,7 @@ for(country in c("Belize", "Guatemala", "Honduras", "Mexico")){
 
 cruiseOvernight <- nationalviz %>% 
   filter(PopClean == "Cruise" | PopClean == "Overnight") %>%
-  group_by(Country, Year, Complete) %>%
+  group_by(Country, year = Year, Complete) %>%
   summarise(`CruiseOvernight` = sum(Visitors))
 ## NOTE: Guatemala pre 2015 is only Overnight visitors in this tibble
 
@@ -110,7 +110,7 @@ cruiseOvernight
 fig1 <- ggplot() +
   geom_point(data = totvis, aes(x = year, y = visitors)) +
   geom_line(data = newdata, aes(x = year, y = preds))  +
-  geom_point(data = cruiseOvernight, aes(x = Year, y = CruiseOvernight, col = Country)) +
+  geom_point(data = cruiseOvernight, aes(x = year, y = CruiseOvernight, col = Country)) +
   scale_y_continuous(limits = c(0, NA))
 fig1
 
@@ -120,6 +120,67 @@ fig1 + scale_y_log10()
 ggplot() +
   geom_point(data = totvis, aes(x = year, y = visitors)) +
   #geom_line(data = newdata, aes(x = year, y = preds))  +
-  geom_point(data = cruiseOvernight, aes(x = Year, y = CruiseOvernight, col = Country)) +
-  scale_y_continuous(limits = c(0, NA))
+  geom_point(data = cruiseOvernight, aes(x = year, y = CruiseOvernight, col = Country)) +
+  #scale_y_continuous(limits = c(0, 5e+06)) +
+  geom_smooth(data = cruiseOvernight, aes(x = year, y = CruiseOvernight, col = Country), 
+              method = "lm") +
+  ggpubr::stat_regline_equation(data = cruiseOvernight, 
+                                aes(x = year, y = CruiseOvernight, col = Country)) +
+  geom_smooth(data = totvis, aes(x = year, y = visitors), method = "lm", col = "black") +
+  ggpubr::stat_regline_equation(data = totvis, aes(x = year, y = visitors), label.y = 4.8e+07)
 
+
+# ok. What would the multipliers be if I used one of the other country's models?
+bz <- cruiseOvernight %>% filter(Country == "Belize")
+gt <- cruiseOvernight %>% filter(Country == "Guatemala")
+hn <- cruiseOvernight %>% filter(Country == "Honduras")
+mx <- cruiseOvernight %>% filter(Country == "Mexico")
+
+bz_mod <- lm(CruiseOvernight  ~ year, data = bz)
+gt_mod <- lm(CruiseOvernight  ~ year, data = gt)
+hn_mod <- lm(CruiseOvernight  ~ year, data = hn)
+mx_mod_10 <- lm(CruiseOvernight ~ year, data = mx)
+
+newdata$Belize <- predict(bz_mod, newdata)
+newdata$Guatemala <- predict(gt_mod, newdata)
+newdata$Honduras <- predict(hn_mod, newdata)
+newdata$Mexico10 <- predict(mx_mod_10, newdata)
+newdata$Mexico <- newdata$preds
+
+# multipliers
+newdata %>% 
+  filter(year == 2050) %>%
+  select(-year, -preds) %>%
+  gather(key = "country", value = "2050pred") %>%
+  left_join(cruiseOvernight %>% 
+              ungroup() %>%
+              filter(year == 2017) %>%
+              select(country = Country, `2017vis` = CruiseOvernight)) %>%
+  mutate(`2017vis` = replace_na(`2017vis`, 46590180),
+         multiplier = `2050pred` / `2017vis`)
+
+## what about if we compare to 2017 preds instead of 2017 observed?
+newdata %>%
+  select(-preds) %>%
+  gather(key = "country", value = "pred", -year) %>%
+  filter(year %in% c(2017, 2050)) %>%
+  group_by(country) %>%
+  mutate(multiplier = pred/lag(pred))
+
+# average multiplier? Using the Mexico10?
+mean(c(2.15, 2.9, 2.41, 2.94)) # 2.6
+
+# using mexico's longer trend?
+mean(c(2.15, 2.9, 2.41, 1.67)) # 2.28
+
+# note that the global trend is 2.4 (10 year trend), incrementally decreasing to 1.8 (40 year trend)
+
+
+# what is year over year percent growth according to each model?
+newdata %>%
+  select( -preds) %>%
+  gather(key = "country", value = "pred", -year) %>%
+  filter(year %in% 2016:2017) %>%
+  group_by(country) %>%
+  mutate(perc_change = (pred - lag(pred))/lag(pred))
+  
