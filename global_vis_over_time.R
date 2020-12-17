@@ -9,6 +9,8 @@
 ##
 
 library(tidyverse)
+library(googlesheets4)
+gs4_auth(email = "sgwinder@uw.edu")
 
 arrivals <- read_sheet("1MglmgHMnbRPsyVOaluKXQfxPhyLTFkkcEAny4p-b5Og")
 
