@@ -39,7 +39,7 @@ aoi <- read_sf("ModelRuns/baseline_20200715/T_AOI_v4_5k_32616_pid.shp")
 country <- "Belize"
 #ipm <- "ipm_05" #Restore Coral
 #aname <- "rest_corl"
-climate <- "clim2" #Baseline climate = clim0; 25th perc = clim1; 75th perc = clim2
+climate <- "clim0" #Baseline climate = clim0; 25th perc = clim1; 75th perc = clim2
 #coral_new <- read_sf("ROOT/ROOT_coral_test_20200519/restore_coral_Tourism_CVmodel/MAR_coral_WGS8416N_erase_restored_areasBZ.shp")
 
 # Now doing Belize protect coral
@@ -92,7 +92,7 @@ modeled$preds_vis <- exp(preds)
 modeled
 
 # and then, what if future vis are *1.32?
-modeled$preds_vis_mult <- modeled$preds_vis*2.4
+modeled$preds_vis_mult <- modeled$preds_vis*2.67
 modeled
 
 # calculate difference
@@ -101,13 +101,15 @@ modeled <- modeled %>%
          diff_log = preds - fitted) # need to be careful about this line and what it means for each scenario
 
 # depending on above climate choice, choose one. Then return to top and rerun with other climate choice
+modeled0 <- modeled
 #modeled25 <- modeled
-modeled75 <- modeled
+#modeled75 <- modeled
 
+modeled0 <- modeled0 %>% mutate(climate = "nochange")
 modeled25 <- modeled25 %>% mutate(climate = "25Perc")
 modeled75 <- modeled75 %>% mutate(climate = "75Perc")
 
-modeled_climate <- bind_rows(modeled25, modeled75)
+modeled_climate <- bind_rows(modeled0, modeled25, modeled75)
 #modeled_climate <- modeled25
 
 # calculating the percent change in visitors
@@ -140,7 +142,7 @@ ggplot(modeled_sp) +
 ggplot(modeled_sp) +
   geom_sf(aes(fill = perc_change_mult), size = .1) +
   scale_fill_distiller(palette = "RdBu",
-                       limit = c(-100, 100),
+                       limit = c(-200, 200),
                        #limit = max(abs(modeled_sp$perc_change_mult)) * c(-1, 1),
                        name = "Percent Change in Tourism (multi)") +
   facet_wrap(~climate)
