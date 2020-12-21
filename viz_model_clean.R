@@ -22,7 +22,7 @@ setwd("~/Documents/MAR/mar_tourism/Data/")
 
 # read in the prepared predictors
 aoi_viz_exp <- read_sf("../../ModelRuns/baseline_20200715/aoi_viz_exp.shp")
-predictors <- read_csv("NonClimatePredictors_20201028.csv")
+predictors <- read_csv("NonClimatePredictors_20201221.csv")
 climatepreds <- read_csv("Future_Climate_RCP85_2050s_and_Current.csv")
 
 est_vis <- aoi_viz_exp %>%
@@ -68,6 +68,10 @@ corrgram(pred_small, upper.panel = panel.pts, lower.panel = panel.cor, diag.pane
 
 # examining climate only
 #corrgram(pred_small %>% dplyr::select(vis_log, temp, hotdays, precip), upper.panel = panel.pts, lower.panel = panel.cor)
+
+# examing coral only
+corrgram(pred_small %>% dplyr::select(starts_with("coral")), upper.panel = panel.pts, lower.panel = panel.cor)
+
 
 # does it work if I drop all NAs? And rescale to get everything 0-1?
 scale_func <- function(x) (x - min(x))/(max(x) - min(x))
