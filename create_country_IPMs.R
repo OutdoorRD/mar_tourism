@@ -13,7 +13,7 @@ library(fasterize)
 setwd("~/Documents/MAR/")
 
 # read in MARwide IPM geojson
-marwide_path <- "ROOT/05_prot_mang/IPMs/MARwide_ipm_05_prot_mang_rec_clim2.geojson"
+marwide_path <- "ROOT/06_prot_corl/IPMs/MARwide_ipm_06_prot_corl_rec_clim2.geojson"
 modeled_sp <- read_sf(marwide_path)
 
 # pull some relevant pieces out
@@ -43,11 +43,13 @@ for(country in countries){
   modeled_country <- modeled_sp %>% filter(CNTRY_NAME == countryLong)
   
   # check it out
-  ggplot(modeled_country) +
+  fig <- ggplot(modeled_country) +
     geom_sf(aes(fill = diff_vis))
   
+  print(fig)
+  
   modeled_country
-  print(summary(modeled_country))
+  summary(modeled_country)
   
   ## Extract the modeled estimates and difference and write it out
   country_clean <- modeled_country %>%
@@ -84,6 +86,5 @@ for(country in countries){
   
   # remove temp files
   files <- list.files(tempdir(), full.names = TRUE)
-  #file.remove(files)
   unlink(files, recursive = TRUE)
 }

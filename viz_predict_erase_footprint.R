@@ -33,11 +33,10 @@ aoi <- read_sf("ModelRuns/baseline_20200715/T_AOI_v4_5k_32616_pid.shp")
 
 ## Getting oriented in naming scheme
 
-anum <- "05" #05 = prot_mang
-aname <- "prot_mang"
-#anameLong <- "ProtectMangrove"
-climate <- "clim2" #Baseline climate = clim0; 25th perc = clim1; 75th perc = clim2
-climshort <- "c2"
+anum <- "06" #05 = prot_mang, 06 = prot_corl
+aname <- "prot_corl"
+climate <- "clim1" #Baseline climate = clim0; 25th perc = clim1; 75th perc = clim2
+climshort <- "c1"
 
 ipm <- paste0("ipm_", anum)
 
