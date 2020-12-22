@@ -7,6 +7,7 @@
 ## Code has been used to create the mangrove scnearios, and should be ready for protect coral
 
 ### Forked from viz_predict.R on 7/27/20
+### Updated 12/22/20 to create Protect Coral and Protect Mangrove scenarios
 
 library(tidyverse)
 library(sf)
@@ -32,10 +33,13 @@ aoi <- read_sf("ModelRuns/baseline_20200715/T_AOI_v4_5k_32616_pid.shp")
 
 ## Getting oriented in naming scheme
 
-aname <- "prot_corl"
-anameLong <- "ProtectCoral"
-climate <- "clim1" #Baseline climate = clim0; 25th perc = clim1; 75th perc = clim2
-climshort <- "c1"
+anum <- "05" #05 = prot_mang
+aname <- "prot_mang"
+#anameLong <- "ProtectMangrove"
+climate <- "clim0" #Baseline climate = clim0; 25th perc = clim1; 75th perc = clim2
+climshort <- "c0"
+
+ipm <- paste0("ipm_", anum)
 
 #newNonClimate <- read_csv(paste0("ROOT/ProtectForest/NonClimatePredictors_", country, "_", climshort, ".csv"))
 
@@ -59,7 +63,7 @@ base_climate_all <- baselines %>%
 base_clim_data <- base_climate_all %>%
   dplyr::select(country, 
                 coral_prop = paste0("coral_prop", clim_post_c), 
-                mangrove, 
+                mangrove_prop, 
                 beach,
                 forest_prop, 
                 temp = paste0("temp", clim_post), 
@@ -74,7 +78,7 @@ base_clim_data <- base_climate_all %>%
 
 preds_base_clim <- predict(viz_model_raw, newdata = base_clim_data)
 modeled$preds_base_clim <- preds_base_clim
-modeled$preds_base_clim_vis <- expm1(preds_base_clim)
+modeled$preds_base_clim_vis <- exp(preds_base_clim)
 modeled
 
 # Create tibble of SCENARIO data in new climate
@@ -87,7 +91,7 @@ modeled
 
 if(aname == "prot_mang"){
   scen_clim_data <- base_clim_data %>%
-    mutate(mangrove = 0)
+    mutate(mangrove_prop = 0)
 }else if (aname == "prot_corl"){
   scen_clim_data <- base_clim_data %>%
     mutate(coral_prop = 0)
@@ -114,16 +118,19 @@ summary(scen_clim_data)
 
 preds_scen_clim <- predict(viz_model_raw, newdata = scen_clim_data)
 modeled$preds_scen_clim <- preds_scen_clim
-modeled$preds_scen_clim_vis <- expm1(preds_scen_clim)
+modeled$preds_scen_clim_vis <- exp(preds_scen_clim)
 modeled
 
-
+# Apply future vis multiplier of 2.67
+modeled$preds_base_clim_vis_future <- modeled$preds_base_clim_vis * 2.67
+modeled$preds_scen_clim_vis_future <- modeled$preds_scen_clim_vis * 2.67
+modeled
 
 # calculate difference
 modeled <- modeled %>%
-  mutate(diff_vis = round(preds_base_clim_vis - preds_scen_clim_vis, 2)) # need to be careful about this line and what it means for each scenario
+  mutate(diff_vis = round(preds_base_clim_vis_future - preds_scen_clim_vis_future, 2)) # need to be careful about this line and what it means for each scenario
 modeled
-
+summary(modeled)
 # join to spatial 
 modeled_sp <- aoi %>%
   dplyr::select(pid, CNTRY_NAME) %>%
@@ -132,7 +139,11 @@ modeled_sp <- aoi %>%
 ggplot(modeled_sp) +
   geom_sf(aes(fill = diff_vis), size = .1)
 
+# write this out (for the whole MAR region)
+st_write(modeled_sp, paste0("ROOT/", anum, "_", aname, "/IPMs/MARwide_", ipm, "_", aname, "_rec_", climate, ".geojson"), delete_dsn = TRUE)
 
+
+###########################
 ### Looping through the countries ###
 # note that the ipm code changes, so reference the ProtectMangrove README.md to find them (or the ROOT data tracking spreadsheet)
 

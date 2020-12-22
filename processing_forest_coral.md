@@ -24,7 +24,7 @@ Steps (Coastal Forest):
 
 Coral steps
 1. As above
-2. As above
+2. As above (but keep all columns for the first `T_AOI_coral_baseline.geojson`)
   - Saved as `T_AOI_prot_fors_coral.geojson` in `MAR/ROOT/ProtectForest/CoralScenarios`
 3. Create a binary coastal layer by removing pixels where coral cover is < 10%.
   - Use Raster Calculator
