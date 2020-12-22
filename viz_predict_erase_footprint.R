@@ -36,8 +36,8 @@ aoi <- read_sf("ModelRuns/baseline_20200715/T_AOI_v4_5k_32616_pid.shp")
 anum <- "05" #05 = prot_mang
 aname <- "prot_mang"
 #anameLong <- "ProtectMangrove"
-climate <- "clim0" #Baseline climate = clim0; 25th perc = clim1; 75th perc = clim2
-climshort <- "c0"
+climate <- "clim2" #Baseline climate = clim0; 25th perc = clim1; 75th perc = clim2
+climshort <- "c2"
 
 ipm <- paste0("ipm_", anum)
 
@@ -141,62 +141,4 @@ ggplot(modeled_sp) +
 
 # write this out (for the whole MAR region)
 st_write(modeled_sp, paste0("ROOT/", anum, "_", aname, "/IPMs/MARwide_", ipm, "_", aname, "_rec_", climate, ".geojson"), delete_dsn = TRUE)
-
-
-###########################
-### Looping through the countries ###
-# note that the ipm code changes, so reference the ProtectMangrove README.md to find them (or the ROOT data tracking spreadsheet)
-
-country <- "mx"
-countryLong <- "Mexico"
-ipm <- "ipm_06" # ProtectMangrove: mx = 02, bz = 06, gt = 06, hn = 10 
-# ProtectCoral: mx = 06, bz = 08, hn = 15
-
-# import empty country raster & country aoi outline
-country_rast <- raster(paste0("ROOT/CountryAOIs/", country, "_root_aoi.tif"))
-country_sf <- read_sf(paste0("ROOT/CountryAOIs/", country, "_root_aoi.shp"))
-
-
-# subset to country
-modeled_country <- modeled_sp %>% filter(CNTRY_NAME == countryLong)
-
-# check it out
-ggplot(modeled_country) +
-  geom_sf(aes(fill = diff_vis))
-
-modeled_country
-summary(modeled_country$diff_vis)
-
-## Extract the modeled estimates and difference and write it out
-country_clean <- modeled_country %>%
-  dplyr::select(pid, CNTRY_NAME, est_vis, preds_base_clim_vis, preds_scen_clim_vis, diff_vis)
-
-# write out shp
-st_write(country_clean, paste0("ROOT/", anameLong, "/IPMs/", country, "_", ipm, "_", aname, "_rec_", climate, ".geojson"))#, delete_dsn = TRUE)
-
-
-  
-### Convert to Raster 
-
-# raster type to float 32 is what matthew thinks will help
-# transform
-country_tran <- st_transform(country_clean, crs = 26916) 
-
-diff_rast <- fasterize(country_tran, country_rast, field = "diff_vis", background = 0)
-diff_rast
-#plot(diff_rast)
-#dataType(diff_rast) <- "FLT4S"
-#dataType(diff_rast)
-
-# mask it
-# NOTE: if this throws strange errors/warnings, go to `tmp/R******` and delete all the temp rasters that have been created
-diff_masked <- mask(diff_rast, mask = country_sf, datatype = "FLT4S")
-diff_masked
-
-# write it out
-writeRaster(diff_masked, 
-            paste0("ROOT/", anameLong, "/IPMs/", country, "_", ipm,"_", aname, "_rec_", climate, ".tif"), 
-            format = "GTiff", datatype = "FLT4S", overwrite = TRUE)
-
-
 
