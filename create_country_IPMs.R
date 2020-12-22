@@ -13,7 +13,7 @@ library(fasterize)
 setwd("~/Documents/MAR/")
 
 # read in MARwide IPM geojson
-marwide_path <- "ROOT/06_prot_corl/IPMs/MARwide_ipm_06_prot_corl_rec_clim2.geojson"
+marwide_path <- "ROOT/07_rest_corl/IPMs/MARwide_ipm_07_rest_corl_rec_clim2.geojson"
 modeled_sp <- read_sf(marwide_path)
 
 # pull some relevant pieces out
@@ -22,7 +22,8 @@ aname <- str_extract(marwide_path, "(?<=[:digit:]{2}_)[:alpha:]+_[:alpha:]+")
 climate <- str_extract(marwide_path, "[:alnum:]*(?=.geojson)")
 ipm <- paste0("ipm_", anum)
 
-countries <- c("mx", "bz", "gt", "hn")
+#countries <- c("mx", "bz", "gt", "hn")
+countries <- c("bz")
 
 for(country in countries){
   # Set Country (protect mangrove gets all 4)
