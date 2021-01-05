@@ -39,7 +39,7 @@ aoi <- read_sf("ModelRuns/baseline_20200715/T_AOI_v4_5k_32616_pid.shp")
 country <- "Belize"
 #ipm <- "ipm_05" #Restore Coral
 #aname <- "rest_corl"
-climate <- "clim0" #Baseline climate = clim0; 25th perc = clim1; 75th perc = clim2
+climate <- "clim2" #Baseline climate = clim0; 25th perc = clim1; 75th perc = clim2
 #coral_new <- read_sf("ROOT/ROOT_coral_test_20200519/restore_coral_Tourism_CVmodel/MAR_coral_WGS8416N_erase_restored_areasBZ.shp")
 
 # Now doing Belize protect coral
@@ -91,7 +91,7 @@ modeled$preds <- preds
 modeled$preds_vis <- exp(preds)
 modeled
 
-# and then, what if future vis are *1.32?
+# and then, what if future vis are *2.67?
 modeled$preds_vis_mult <- modeled$preds_vis*2.67
 modeled
 
@@ -101,9 +101,9 @@ modeled <- modeled %>%
          diff_log = preds - fitted) # need to be careful about this line and what it means for each scenario
 
 # depending on above climate choice, choose one. Then return to top and rerun with other climate choice
-modeled0 <- modeled
+#modeled0 <- modeled
 #modeled25 <- modeled
-#modeled75 <- modeled
+modeled75 <- modeled
 
 modeled0 <- modeled0 %>% mutate(climate = "nochange")
 modeled25 <- modeled25 %>% mutate(climate = "25Perc")
@@ -146,6 +146,86 @@ ggplot(modeled_sp) +
                        #limit = max(abs(modeled_sp$perc_change_mult)) * c(-1, 1),
                        name = "Percent Change in Tourism (multi)") +
   facet_wrap(~climate)
+
+## Making individual plots for each climate scen
+
+# no change
+ggplot(modeled_sp %>% filter(climate == "nochange")) +
+  geom_sf(aes(fill = perc_change_mult), size = .1) +
+  scale_fill_distiller(palette = "RdBu",
+                       direction = 1,
+                       limit = c(-200, 200),
+                       #limit = max(abs(modeled_sp$perc_change_mult)) * c(-1, 1),
+                       name = "% Change in Tourism") +
+  labs(title = "Climate does not change")
+
+ggplot(modeled_sp %>% filter(climate == "nochange")) +
+  geom_sf(aes(fill = perc_change_mult), size = .1) +
+  #scale_fill_distiller(palette = "RdBu",
+  #                     direction = 1,
+  #                     limit = c(-100, 300), 
+  #                     #limit = max(abs(modeled_sp$perc_change_mult)) * c(-1, 1),
+  #                     name = "% Change in Tourism") +
+  #scale_fill_gradient2(midpoint = 0)
+  scale_fill_gradientn(colours = c(scales::muted("red"), "white", scales::muted("blue")),
+                       values = c(0, 
+                                  scales::rescale(0, from = c(min(modeled_sp$perc_change_mult[modeled_sp$climate == "75Perc"]),
+                                                              max(modeled_sp$perc_change_mult[modeled_sp$climate == "75Perc"]))),
+                                  1),
+                       name = "% Change in Tourism",
+                       breaks = c(-100, -50, 0, 50, 100, 150, 200, 250)) +
+  #values = scales::rescale(c(min(modeled_sp$perc_change_mult[modeled_sp$climate == "25Perc"]), 
+  #                           0, 
+  #                           max(modeled_sp$perc_change_mult[modeled_sp$climate == "25Perc"])))) +
+  #scale_fill_gradient2()
+  labs(title = "RCP 8.5 - 75th Percentile")
+
+#ggsave("Deliverables/figs/futureVis/perc_change_map_clim0.png", width = 5, height = 5, units = "in")
+
+ggplot(modeled_sp %>% filter(climate == "25Perc")) +
+  geom_sf(aes(fill = perc_change_mult), size = .1) +
+  #scale_fill_distiller(palette = "RdBu",
+  #                     direction = 1,
+  #                     limit = c(-100, 300), 
+  #                     #limit = max(abs(modeled_sp$perc_change_mult)) * c(-1, 1),
+  #                     name = "% Change in Tourism") +
+  scale_fill_gradientn(colours = c(scales::muted("red"), "white", scales::muted("blue")),
+                       values = c(0, 
+                                  scales::rescale(0, from = c(min(modeled_sp$perc_change_mult[modeled_sp$climate == "25Perc"]),
+                                                                 max(modeled_sp$perc_change_mult[modeled_sp$climate == "25Perc"]))),
+                                  1),
+                       name = "% Change in Tourism",
+                       breaks = c(-100, -50, 0, 50, 100, 150, 200, 250)) +
+                       #values = scales::rescale(c(min(modeled_sp$perc_change_mult[modeled_sp$climate == "25Perc"]), 
+                       #                           0, 
+                       #                           max(modeled_sp$perc_change_mult[modeled_sp$climate == "25Perc"])))) +
+  #scale_fill_gradient2()
+  labs(title = "RCP 8.5 - 25th Percentile")
+
+ggsave("Deliverables/figs/futureVis/perc_change_map_clim1.png", width = 5, height = 5, units = "in")
+
+ggplot(modeled_sp %>% filter(climate == "75Perc")) +
+  geom_sf(aes(fill = perc_change_mult), size = .1) +
+  #scale_fill_distiller(palette = "RdBu",
+  #                     direction = 1,
+  #                     limit = c(-100, 300), 
+  #                     #limit = max(abs(modeled_sp$perc_change_mult)) * c(-1, 1),
+  #                     name = "% Change in Tourism") +
+  scale_fill_gradientn(colours = c(scales::muted("red"), "white", scales::muted("blue")),
+                       values = c(0, 
+                                  scales::rescale(0, from = c(min(modeled_sp$perc_change_mult[modeled_sp$climate == "75Perc"]),
+                                                              max(modeled_sp$perc_change_mult[modeled_sp$climate == "75Perc"]))),
+                                  1),
+                       name = "% Change in Tourism",
+                       breaks = c(-100, -50, 0, 50, 100, 150, 200, 250)) +
+  #values = scales::rescale(c(min(modeled_sp$perc_change_mult[modeled_sp$climate == "25Perc"]), 
+  #                           0, 
+  #                           max(modeled_sp$perc_change_mult[modeled_sp$climate == "25Perc"])))) +
+  #scale_fill_gradient2()
+  labs(title = "RCP 8.5 - 75th Percentile")
+
+ggsave("Deliverables/figs/futureVis/perc_change_map_clim2.png", width = 5, height = 5, units = "in")
+
 
 modeled_sp
 # visualizing the log diffs

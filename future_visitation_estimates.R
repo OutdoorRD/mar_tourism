@@ -72,10 +72,47 @@ multipliers <- multipliers_long %>%
 mean(multipliers$multiplier) # 2.67
 
 # let's plot these
+brewer.pal(4, "Dark2")
+
 ggplot() +
-  geom_line(data = newdata, aes(x = year, y = Belize)) +
-  geom_point(data = bz, aes(x = year, y = visitors)) +
-  labs(title = "Belize")
+  geom_line(data = newdata, aes(x = year, y = Mexico/1000000), col = "#E7298A") +
+  geom_point(data = mx, aes(x = year, y = visitors/1000000), col = "#E7298A") +
+  scale_y_continuous(name = "Annual visitors (millions)") +
+  labs(title = "Mexico") +
+  theme_classic()
+ggsave("Deliverables/figs/futureVis/mx_trend.png", width = 3, height = 3, units = "in")
+
+
+ggplot() +
+  geom_line(data = newdata, aes(x = year, y = Honduras/1000000), col = "#7570B3") +
+  geom_point(data = hn, aes(x = year, y = visitors/1000000), col = "#7570B3") +
+  scale_y_continuous(name = "Annual visitors (millions)") +
+  labs(title = "Honduras") +
+  theme_classic()
+ggsave("Deliverables/figs/futureVis/hn_trend.png", width = 3, height = 3, units = "in")
+
+
+ggplot() +
+  geom_line(data = newdata, aes(x = year, y = Guatemala/1000000), col = "#D95F02") +
+  geom_point(data = gt, aes(x = year, y = visitors/1000000), col = "#D95F02") +
+  scale_y_continuous(name = "Annual visitors (millions)") +
+  labs(title = "Guatemala") +
+  theme_classic()
+ggsave("Deliverables/figs/futureVis/gt_trend.png", width = 3, height = 3, units = "in")
+
+
+ggplot() +
+  geom_line(data = newdata, aes(x = year, y = Belize/1000000), col = "#1B9E77") +
+  geom_point(data = bz, aes(x = year, y = visitors/1000000), col = "#1B9E77") +
+  #geom_text(data = (newdata %>% filter(year %in% c(2017, 2050))), 
+  #          aes(x = year+3, y = Belize-50000, label = round(Belize, digits = -3)))+
+  #geom_point(data = (newdata %>% filter(year %in% c(2017, 2050))), 
+  #          aes(x = year, y = Belize))+
+  scale_y_continuous(name = "Annual visitors (millions)", breaks = c(1, 1.5, 2, 2.5, 3, 3.5)) +
+  labs(title = "Belize") +
+  theme_classic()
+ggsave("Deliverables/figs/futureVis/bz_trend.png", width = 3, height = 3, units = "in")
+
 
 ggplot() +
   geom_line(data = newdata, aes(x = year, y = Guatemala)) +
@@ -102,10 +139,41 @@ perc_change <- newdata %>%
   mutate(perc_of_2017 = case_when(Country == "Belize" ~ 100*prediction / preds_2017$Belize,
                                   Country == "Guatemala" ~ 100*prediction / preds_2017$Guatemala,
                                   Country == "Honduras" ~ 100*prediction / preds_2017$Honduras,
-                                  Country == "Mexico" ~ 100*prediction / preds_2017$Mexico))
+                                  Country == "Mexico" ~ 100*prediction / preds_2017$Mexico),
+         perc_change_2017 = case_when(Country == "Belize" ~ 100*(prediction - preds_2017$Belize)/ preds_2017$Belize,
+                                  Country == "Guatemala" ~  100*(prediction - preds_2017$Guatemala)/ preds_2017$Guatemala,
+                                  Country == "Honduras" ~   100*(prediction - preds_2017$Honduras)/ preds_2017$Honduras,
+                                  Country == "Mexico" ~     100*(prediction - preds_2017$Mexico)/ preds_2017$Mexico))
+
+# create "average" line
+perc_change_avg <- perc_change %>%
+  pivot_wider(id_cols = year, names_from = Country, values_from = perc_change_2017) %>%
+  rowwise() %>%
+  mutate(Average = mean(c(Belize, Guatemala, Honduras, Mexico))) %>%
+  pivot_longer(-year, names_to = "Country", values_to = "perc_change_2017")
+
 
 ggplot(perc_change) +
   geom_line(aes(x = year, y = perc_of_2017, col = Country))
+
+
+ggplot(perc_change_avg) +
+  geom_hline(yintercept = 0, col = "gray68") +
+  geom_vline(xintercept = 2017, col = "gray68") +
+  geom_line(aes(x = year, y = perc_change_2017, col = Country, linetype = Country)) +
+  #geom_label(x = 2052, y = 167, label = "167%") +
+  scale_color_manual(values = c("black", brewer.pal(4, "Dark2"))) +
+  scale_linetype_manual(values = c(1, 2, 2, 2, 2)) +
+  scale_x_continuous(breaks = c(2010, 2020, 2030, 2040, 2050), minor_breaks = seq(2009, 2050, by = 1)) +
+  ylab("Percent Change in Visitation from 2017 (Estimated)") +
+  xlab("Year") +
+  theme_classic()
+
+# write it out
+ggsave("Deliverables/figs/percent_change_tourism.png", width = 6, height = 5, units = "in")
+
+library(RColorBrewer)
+brewer.pal(4, "Dark2")
 
 # can i add observed points on here?
 observed_perc_change <- cruiseOvernight %>%
@@ -121,3 +189,11 @@ ggplot(perc_change) +
 
 # ok. may want to consider pretty-ing up some of these for explaining the method.
 # But for now, let's go with the average growth of 2.67
+
+# raw values?
+ggplot(perc_change) +
+  geom_line(aes(x = year, y = prediction, col = Country)) +
+  geom_point(data = observed_perc_change, aes(x = year, y = visitors, col = Country)) +
+  facet_wrap(~ Country)
+
+# nope. better each on their own plot
