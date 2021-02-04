@@ -1,0 +1,38 @@
+
+Call:
+lm(formula = vis_log ~ country + coral_prop + mangrove_prop + 
+    beach + forest_prop + temp + I(temp^2) + hotdays + precip + 
+    wildlife + pa_min_dist + ruins + develop + roads + cellarea, 
+    data = pred_scaled)
+
+Residuals:
+    Min      1Q  Median      3Q     Max 
+-7.2753 -1.4298 -0.3333  1.5155  7.3132 
+
+Coefficients:
+                 Estimate Std. Error t value Pr(>|t|)    
+(Intercept)       1.05393    0.24229   4.350 1.38e-05 ***
+countryGuatemala -1.89071    0.13126 -14.405  < 2e-16 ***
+countryHonduras  -0.88882    0.06979 -12.736  < 2e-16 ***
+countryMexico    -0.24648    0.08914  -2.765  0.00571 ** 
+coral_prop        4.61503    0.37570  12.284  < 2e-16 ***
+mangrove_prop     1.95865    0.36160   5.417 6.26e-08 ***
+beach             1.87047    0.10328  18.110  < 2e-16 ***
+forest_prop       0.84595    0.07886  10.728  < 2e-16 ***
+temp              2.58587    0.66055   3.915 9.13e-05 ***
+I(temp^2)        -3.10276    0.58932  -5.265 1.44e-07 ***
+hotdays          -0.41647    0.17417  -2.391  0.01682 *  
+precip            0.68883    0.17638   3.905 9.49e-05 ***
+wildlife          0.49230    0.08039   6.124 9.57e-10 ***
+pa_min_dist      -4.46723    0.14573 -30.654  < 2e-16 ***
+ruins             2.69106    0.43766   6.149 8.20e-10 ***
+develop           1.87712    0.08364  22.444  < 2e-16 ***
+roads             1.80467    0.08866  20.355  < 2e-16 ***
+cellarea          1.82882    0.09938  18.403  < 2e-16 ***
+---
+Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+
+Residual standard error: 1.985 on 7792 degrees of freedom
+Multiple R-squared:  0.4548,	Adjusted R-squared:  0.4536 
+F-statistic: 382.4 on 17 and 7792 DF,  p-value: < 2.2e-16
+

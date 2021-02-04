@@ -63,7 +63,7 @@ develop <- read_sf("GIS/Predictors/Baseline_Inputs/ProjectedForInvestValid/lulc_
 ports_air <- read_sf("GIS/Predictors/Baseline_Inputs/ProjectedForInvestValid/ports_air_32616.shp")
 
 # Mangrove (for % coverage)
-mangrove <- read_sf("GIS/Predictors/Baseline_Inputs/ProjectedForInvestValid/MARwide_mangrove_healthy_footprint_Oct2020_32616.shp")
+mangrove <- read_sf("GIS/Predictors/Baseline_Inputs/ProjectedForInvestValid/MARwide_mangrove_baseline_healthy_footprint_Jan2021_32616.shp")
 
 multiplier <- pull(read.csv("mar_tourism/Data/areaTo30mCellMultiplier.csv"))
 

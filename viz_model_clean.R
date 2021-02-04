@@ -22,7 +22,7 @@ setwd("~/Documents/MAR/mar_tourism/Data/")
 
 # read in the prepared predictors
 aoi_viz_exp <- read_sf("../../ModelRuns/baseline_20200715/aoi_viz_exp.shp")
-predictors <- read_csv("NonClimatePredictors_20201221.csv")
+predictors <- read_csv("NonClimatePredictors_20210204.csv")
 climatepreds <- read_csv("Future_Climate_RCP85_2050s_and_Current.csv")
 
 est_vis <- aoi_viz_exp %>%
@@ -64,13 +64,13 @@ summary(pred_small)
   #mutate(developed = as.integer(prop_dev > 0),
    #      roads = as.integer(roads_min_dist == 0)) %>%
   #dplyr::select(-roads_min_dist, -prop_dev)
-corrgram(pred_small, upper.panel = panel.pts, lower.panel = panel.cor, diag.panel = panel.density)
+#corrgram(pred_small, upper.panel = panel.pts, lower.panel = panel.cor, diag.panel = panel.density)
 
 # examining climate only
 #corrgram(pred_small %>% dplyr::select(vis_log, temp, hotdays, precip), upper.panel = panel.pts, lower.panel = panel.cor)
 
 # examing coral only
-corrgram(pred_small %>% dplyr::select(starts_with("coral")), upper.panel = panel.pts, lower.panel = panel.cor)
+#corrgram(pred_small %>% dplyr::select(starts_with("coral")), upper.panel = panel.pts, lower.panel = panel.cor)
 
 
 # does it work if I drop all NAs? And rescale to get everything 0-1?
@@ -89,7 +89,7 @@ vis_model <- lm(vis_log ~ country + coral_prop + mangrove_prop + beach + forest_
                 wildlife +
               pa_min_dist + ruins  + develop + roads + cellarea, 
             data = pred_scaled)
-summary(vis_model)
+(vm_sum <- summary(vis_model))
 # .445 vs .449
 # cellarea seems to be an important controlling variable (sig, and brings me from .44 to .467)
 modplot(vis_model)
@@ -134,10 +134,18 @@ vis_model_raw <- lm(vis_log ~ country + coral_prop + mangrove_prop + beach + for
                 data = pred_small)
 summary(vis_model_raw)
 
-# let's write out the predictors and model objects for both of these and track them
+# let's write out the predictors and model objects for both of these and track them. Also let's write out the model summaries
+sink("../Models/vis_model_scaled_summary.txt")
+summary(vis_model)
+
+sink("../Models/viz_model_raw_summary.txt")
+summary(vis_model_raw)
+sink()
+
 write_csv(pred_small, "Predictors_Baseline.csv")
 write_csv(pred_scaled, "Predictors_Baseline_scaled.csv")
 
 write_rds(vis_model, "../Models/viz_model_scaled.rds")
 write_rds(vis_model_raw, "../Models/viz_model_raw.rds")
+
 
