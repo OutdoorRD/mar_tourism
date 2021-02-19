@@ -13,7 +13,7 @@ library(fasterize)
 setwd("~/Documents/MAR/")
 
 # read in MARwide IPM geojson
-marwide_path <- "ROOT/02_prot_fors/IPMs/MARwide_ipm_02_prot_fors_rec_clim2.geojson"
+marwide_path <- "ROOT/05_prot_mang/IPMs/MARwide_ipm_05_prot_mang_rec_clim0.geojson"
 modeled_sp <- read_sf(marwide_path)
 
 # pull some relevant pieces out
@@ -24,7 +24,8 @@ ipm <- paste0("ipm_", anum)
 
 #countries <- c("mx", "bz", "gt", "hn")
 #countries <- c("bz")
-countries <- c("bz", "gt", "hn")
+countries <- c("bz", "gt", "mx")
+#country <- "hn"
 
 for(country in countries){
   # Set Country (protect mangrove gets all 4)
@@ -55,7 +56,7 @@ for(country in countries){
   
   ## Extract the modeled estimates and difference and write it out
   country_clean <- modeled_country %>%
-    dplyr::select(pid, CNTRY_NAME, est_vis, preds_base_clim_vis_future, preds_scen_clim_vis_future, diff_vis)
+    dplyr::select(pid, CNTRY_NAME, est_vis, preds_base_clim_vis_future, preds_scen_clim_vis_future, diff_vis, perc_change)
   
   # write out shp
   st_write(country_clean, paste0("ROOT/", anum, "_", aname, "/IPMs/", country, "_", ipm, "_", aname, "_rec_", climate, ".geojson"))#, delete_dsn = TRUE)
@@ -80,9 +81,14 @@ for(country in countries){
   diff_masked <- mask(diff_rast, mask = country_sf, datatype = "FLT4S")
   diff_masked
   
+  # spread tourists according to conversion factor (new 2/19/21)
+  converter <- raster(paste0("ROOT/CountryAOIs/Conversions/", country, "_conversion.tif"))
+  
+  # convert
+  diff_spread <- diff_masked/converter
   
   # write it out
-  writeRaster(diff_masked, 
+  writeRaster(diff_spread, 
               paste0("ROOT/", anum, "_", aname, "/IPMs/", country, "_", ipm,"_", aname, "_rec_", climate, ".tif"), 
               format = "GTiff", datatype = "FLT4S", overwrite = TRUE)
   

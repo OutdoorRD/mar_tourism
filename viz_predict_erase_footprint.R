@@ -9,6 +9,8 @@
 ### Forked from viz_predict.R on 7/27/20
 ### Updated 12/22/20 to create Protect Coral and Protect Mangrove scenarios
 
+### Updated 2/19/21 to recreate Protect Mangrove scenarios
+
 library(tidyverse)
 library(sf)
 library(lwgeom)
@@ -33,10 +35,10 @@ aoi <- read_sf("ModelRuns/baseline_20200715/T_AOI_v4_5k_32616_pid.shp")
 
 ## Getting oriented in naming scheme
 
-anum <- "06" #05 = prot_mang, 06 = prot_corl
-aname <- "prot_corl"
-climate <- "clim1" #Baseline climate = clim0; 25th perc = clim1; 75th perc = clim2
-climshort <- "c1"
+anum <- "05" #05 = prot_mang, 06 = prot_corl
+aname <- "prot_mang"
+climate <- "clim0" #Baseline climate = clim0; 25th perc = clim1; 75th perc = clim2
+climshort <- "c0"
 
 ipm <- paste0("ipm_", anum)
 
@@ -52,7 +54,8 @@ clim_post_c <- case_when(climate == "clim0" ~ "",
                        climate == "clim2" ~ "75")
 
 modeled <- baselines %>%
-  dplyr::select(pid, vis_log, est_vis) 
+  dplyr::select(pid, vis_log, est_vis) %>%
+  arrange(pid)
 
 #### Joining climate onto baselines
 base_climate_all <- baselines %>%
@@ -60,7 +63,8 @@ base_climate_all <- baselines %>%
 
 ### Create tibble of baseline values in new climate
 base_clim_data <- base_climate_all %>%
-  dplyr::select(country, 
+  dplyr::select(pid,
+                country, 
                 coral_prop = paste0("coral_prop", clim_post_c), 
                 mangrove_prop, 
                 beach,
@@ -73,11 +77,13 @@ base_clim_data <- base_climate_all %>%
                 ruins, 
                 develop, 
                 roads,
-                cellarea)
+                cellarea) %>%
+    arrange(pid)
 
 preds_base_clim <- predict(viz_model_raw, newdata = base_clim_data)
 modeled$preds_base_clim <- preds_base_clim
-modeled$preds_base_clim_vis <- exp(preds_base_clim)
+modeled$preds_base_clim_vis <- exp(preds_base_clim) # Note: I'm doing exp and not expm1 to avoid negative visitors 
+## TODO: examine the assumption above a bit more closely!
 modeled
 
 # Create tibble of SCENARIO data in new climate
@@ -127,7 +133,8 @@ modeled
 
 # calculate difference
 modeled <- modeled %>%
-  mutate(diff_vis = round(preds_base_clim_vis_future - preds_scen_clim_vis_future, 2)) # need to be careful about this line and what it means for each scenario
+  mutate(diff_vis = round(preds_base_clim_vis_future - preds_scen_clim_vis_future, 2),
+         perc_change = 100*(preds_base_clim_vis_future - preds_scen_clim_vis_future) / preds_scen_clim_vis_future) # need to be careful about this line and what it means for each scenario
 modeled
 summary(modeled)
 # join to spatial 
@@ -135,8 +142,11 @@ modeled_sp <- aoi %>%
   dplyr::select(pid, CNTRY_NAME) %>%
   left_join(modeled, by = "pid")
 
-ggplot(modeled_sp) +
+ggplot(modeled_sp %>% filter(diff_vis != 0)) +
   geom_sf(aes(fill = diff_vis), size = .1)
+
+ggplot(modeled_sp %>% filter(diff_vis != 0)) +
+  geom_sf(aes(fill = perc_change), size = .1)
 
 # write this out (for the whole MAR region)
 st_write(modeled_sp, paste0("ROOT/", anum, "_", aname, "/IPMs/MARwide_", ipm, "_", aname, "_rec_", climate, ".geojson"), delete_dsn = TRUE)
