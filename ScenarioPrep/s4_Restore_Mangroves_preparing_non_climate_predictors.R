@@ -5,6 +5,8 @@
 ### Outputs: NonClimatePredictors_dddd.csv and .geojson
 ### Forked from preparing_nonclimate_predictors on 10/29/20.
 
+### Updated with latest mangroves 2/19/21
+
 # Those predictors are:
 # Beach - presence/absence (line)
 # Coral - % coverage (poly)
@@ -48,7 +50,7 @@ aoi <- read_sf("ModelRuns/baseline_20200715/T_AOI_v4_5k_32616_pid.shp")
 
 # read in variables that have already been intersected in QGIS (forest & coral)
 forest <- read_sf("GIS/Predictors/LULC/Forest_Created/T_AOI_v4_5k_32616_coastal_forest.shp")
-coral <- read_sf("GIS/Predictors/Coral/CoralCover/0_mar/Version1/T_AOI_coral_baseline.geojson")
+coral <- read_sf("GIS/Predictors/Coral/CoralCover/0_mar/T_AOI_coral_baseline.geojson")
 
 # Presence/absence variables
 beach <- read_sf("GIS/Predictors/Baseline_Inputs/ProjectedForInvestValid/beach_from_geomorph_MAR_v4_shift_BZ_MX_32616.shp")
@@ -62,11 +64,11 @@ ports_air <- read_sf("GIS/Predictors/Baseline_Inputs/ProjectedForInvestValid/por
 
 #### THE CHANGE FOR RESTORE MANGROVES IS HERE ####
 # Mangrove (for % coverage)
-mangrove1 <- read_sf("GIS/Predictors/Baseline_Inputs/ProjectedForInvestValid/MARwide_mangrove_healthy_footprint_Oct2020_32616.shp")
+mangrove1 <- read_sf("GIS/Predictors/Baseline_Inputs/ProjectedForInvestValid/MARwide_mangrove_baseline_healthy_footprint_Jan2021_32616.shp")
 
 # Note that our "restore mangrove" footprint is just the area targeted for restoration. So the scenario needs
 # to be the percent of the hex covered by both the healthy footrpint AND the resotration footprint
-mangrove2 <- read_sf("ROOT/04RestoreMangroves/MAR_mangrove_Oct2020/MAR_Mangrove_Layers/MARwide_mangrove_restoration_footprint_Oct2020_32616.shp")
+mangrove2 <- read_sf("ROOT/04_rest_mang/MAR_Mangrove_Layers_Jan2021/MARwide_mangrove_restoration_footprint_Jan2021_32616.shp")
 
 # combine them into a single layer
 mangrove1_geom <- mangrove1 %>% dplyr::select(geometry)

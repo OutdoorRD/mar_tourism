@@ -8,7 +8,7 @@
 ### 7/1 Adding climate
 
 ### Forked from `viz_predict` on 10/29/20. Not sure we need indiv scripts for each scenario, but trying for nwo
-
+### Updated 2/19/21 to re-create restore_mangroves layers
 library(tidyverse)
 library(sf)
 library(lwgeom)
@@ -37,12 +37,12 @@ aoi <- read_sf("ModelRuns/baseline_20200715/T_AOI_v4_5k_32616_pid.shp")
 #ipm <- "ipm_04" 
 anum <- "04" #restore mangroves
 aname <- "rest_mang"
-climate <- "clim2" #Baseline climate = clim0; 25th perc = clim1; 75th perc = clim2
-climshort <- "c2"
+climate <- "clim0" #Baseline climate = clim0; 25th perc = clim1; 75th perc = clim2
+climshort <- "c0"
 
 ipm <- paste0("ipm_", anum)
 
-newNonClimate <- read_csv("mar_tourism/Data/Scenarios/s4_restore_mangroves_NonClimatePredictors_20201029.csv")
+newNonClimate <- read_csv("mar_tourism/Data/Scenarios/s4_restore_mangroves_NonClimatePredictors_20210219.csv")
 
 
 clim_post <- case_when(climate == "clim0" ~ "0",
@@ -117,12 +117,16 @@ modeled$preds_scen_clim <- preds_scen_clim
 modeled$preds_scen_clim_vis <- exp(preds_scen_clim)
 modeled
 
+# Apply future vis multiplier of 2.67
+modeled$preds_base_clim_vis_future <- modeled$preds_base_clim_vis * 2.67
+modeled$preds_scen_clim_vis_future <- modeled$preds_scen_clim_vis * 2.67
+modeled
 
 
 # calculate difference
 modeled <- modeled %>%
-  mutate(diff_vis = round(preds_scen_clim_vis - preds_base_clim_vis, 2), # ALWAYS - Now standardized
-         perc_change = 100*(preds_scen_clim_vis - preds_base_clim_vis) / preds_base_clim_vis) 
+  mutate(diff_vis = round(preds_scen_clim_vis_future - preds_base_clim_vis_future, 2), # Varies by adaptation strategy
+         perc_change = 100*(preds_scen_clim_vis_future - preds_base_clim_vis_future) / preds_base_clim_vis_future) 
 modeled
 
 # join to spatial 

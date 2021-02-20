@@ -13,7 +13,7 @@ library(fasterize)
 setwd("~/Documents/MAR/")
 
 # read in MARwide IPM geojson
-marwide_path <- "ROOT/05_prot_mang/IPMs/MARwide_ipm_05_prot_mang_rec_clim0.geojson"
+marwide_path <- "ROOT/04_rest_mang/IPMs/MARwide_ipm_04_rest_mang_rec_clim0.geojson"
 modeled_sp <- read_sf(marwide_path)
 
 # pull some relevant pieces out
@@ -22,9 +22,9 @@ aname <- str_extract(marwide_path, "(?<=[:digit:]{2}_)[:alpha:]+_[:alpha:]+")
 climate <- str_extract(marwide_path, "[:alnum:]*(?=.geojson)")
 ipm <- paste0("ipm_", anum)
 
-#countries <- c("mx", "bz", "gt", "hn")
+countries <- c("mx", "bz", "gt", "hn")
 #countries <- c("bz")
-countries <- c("bz", "gt", "mx")
+#countries <- c("bz", "gt", "mx")
 #country <- "hn"
 
 for(country in countries){
