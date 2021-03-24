@@ -45,14 +45,19 @@ aoi <- read_sf("ModelRuns/baseline_20200715/T_AOI_v4_5k_32616_pid.shp")
 ## Getting oriented in naming scheme
 
 # Protect forest is relevant for BZ, GT, and HN
-anum <- "01" # 01 = restore, 02 =protect forest
-aname <- "rest_fors"
+anum <- "02" # 01 = restore, 02 =protect forest
+aname <- "prot_fors"
 climate <- "clim0" #Baseline climate = clim0; 25th perc = clim1; 75th perc = clim2
 climshort <- "c0"
 
 ipm <- paste0("ipm_", anum)
 
-newNonClimate <- read_csv("mar_tourism/Data/Scenarios/s1_rest_fors_NonClimatePredictors_20210324.csv")
+if(anum == "01"){
+  newNonClimate <- read_csv("mar_tourism/Data/Scenarios/s1_rest_fors_NonClimatePredictors_20210324.csv")
+}else{
+  newNonClimate <- read_csv("mar_tourism/Data/Scenarios/s2_prot_fors_NonClimatePredictors_20210324.csv")  
+}
+
 
 ## Reading in alternative s0 forest values, and doing some processing on them
 ## This part forked from `prepping_non_climate_predictors`
