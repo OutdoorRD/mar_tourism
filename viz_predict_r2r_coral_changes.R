@@ -1,5 +1,6 @@
 #####
 ### Forked from viz_predict_erase_footrpint on 2/23/21
+### This script is for predicting changes in vis due to R2R coral changes!
 ###
 ### Using the Viz Model to predict Viz under different scenarios
 ### This script is optimized for "protect" scenarios that simply remove the entire 

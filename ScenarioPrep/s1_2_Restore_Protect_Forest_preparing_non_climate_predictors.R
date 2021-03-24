@@ -55,8 +55,8 @@ PresAbsFunc <- function(predictor, aoi = aoi){
 setwd("~/Documents/MAR")
 
 # specify s1 or s2
-anum <- "1"
-aname <- "rest_fors"
+anum <- "2"
+aname <- "prot_fors"
 
 # Start by reading in the files
 aoi <- read_sf("ModelRuns/baseline_20200715/T_AOI_v4_5k_32616_pid.shp")
