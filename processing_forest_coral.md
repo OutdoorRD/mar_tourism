@@ -17,8 +17,8 @@ Steps (Coastal Forest):
   - Toolbox / Raster analysis / Zonal Statistics
   - Raster layer: `*_coastal_binary`
   - Vector layer: `T_AOI_protect_forest`
-  - Output column prefix: `bz_`
-  - Statistics to calculate: Count, Sum (for now)
+  - Output column prefix: `bz_` or, for MAR-wide layers: `fors_`
+  - Statistics to calculate: Sum (for now)
 6. Repeat 4 & 5 with other countries (Guatemala and Honduras)
   - NOTE: Make sure to double check the results. I had some weird over-writing experiences, and ended up choosing the really basic "bz_" prefix, which seems to have fixed it (earlier I tried "bz_s3_forest_")
 
