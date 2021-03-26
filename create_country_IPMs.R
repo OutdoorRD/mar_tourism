@@ -13,16 +13,18 @@ library(fasterize)
 setwd("~/Documents/MAR/")
 
 # read in MARwide IPM geojson
-marwide_path <- "ROOT/04_rest_mang/IPMs/MARwide_ipm_04_rest_mang_rec_clim0.geojson"
+marwide_path <- "ROOT/01_rest_fors/ForestScenarios/IPMs/MARwide_ipm_01_rest_fors_rec_clim0.geojson"
 modeled_sp <- read_sf(marwide_path)
 
 # pull some relevant pieces out
 anum <- str_extract(marwide_path, "[:digit:]{2}")
 aname <- str_extract(marwide_path, "(?<=[:digit:]{2}_)[:alpha:]+_[:alpha:]+")
 climate <- str_extract(marwide_path, "[:alnum:]*(?=.geojson)")
+ipm_dir <- str_extract(marwide_path, ".*(?=MARwide)")
 ipm <- paste0("ipm_", anum)
 
-countries <- c("mx", "bz", "gt", "hn")
+#countries <- c("mx", "bz", "gt", "hn")
+countries <- c("bz", "gt", "hn") # for watershed scenarios
 #countries <- c("bz")
 #countries <- c("bz", "gt", "mx")
 #country <- "hn"
@@ -59,7 +61,7 @@ for(country in countries){
     dplyr::select(pid, CNTRY_NAME, est_vis, preds_base_clim_vis_future, preds_scen_clim_vis_future, diff_vis, perc_change)
   
   # write out shp
-  st_write(country_clean, paste0("ROOT/", anum, "_", aname, "/IPMs/", country, "_", ipm, "_", aname, "_rec_", climate, ".geojson"))#, delete_dsn = TRUE)
+  st_write(country_clean, paste0(ipm_dir, country, "_", ipm, "_", aname, "_rec_", climate, ".geojson"))#, delete_dsn = TRUE)
   
   
   
@@ -89,7 +91,7 @@ for(country in countries){
   
   # write it out
   writeRaster(diff_spread, 
-              paste0("ROOT/", anum, "_", aname, "/IPMs/", country, "_", ipm,"_", aname, "_rec_", climate, ".tif"), 
+              paste0(ipm_dir, country, "_", ipm,"_", aname, "_rec_", climate, ".tif"), 
               format = "GTiff", datatype = "FLT4S", overwrite = TRUE)
   
   # remove temp files
