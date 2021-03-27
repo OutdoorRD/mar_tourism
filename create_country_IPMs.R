@@ -13,7 +13,7 @@ library(fasterize)
 setwd("~/Documents/MAR/")
 
 # read in MARwide IPM geojson
-marwide_path <- "ROOT/01_rest_fors/ForestScenarios/IPMs/MARwide_ipm_01_rest_fors_rec_clim0.geojson"
+marwide_path <- "ROOT/02_prot_fors/ForestScenarios/IPMs/MARwide_ipm_02_prot_fors_rec_clim0.geojson"
 modeled_sp <- read_sf(marwide_path)
 
 # pull some relevant pieces out
