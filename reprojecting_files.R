@@ -13,11 +13,11 @@ library(tidyverse)
 
 #setwd("~/Documents/MAR/GIS/Predictors/Baseline_Inputs/")
 
-inpath <- "~/Documents/MAR/ROOT/04_rest_mang/MAR_Mangrove_Layers_Jan2021/"
+inpath <- "~/Documents/MAR/ROOT/11_fire_mang/Mangrove_eraseFireRiskAMR/"
 outpath <- inpath
 
 # create list of files to transform
-shpfiles <- c("MARwide_mangrove_restoration_footprint_Jan2021", "MARwide_mangrove_baseline_healthy_footprint_Jan2021")
+shpfiles <- c("Mangrove_Fire")
 
 #file1 <- st_read("airports_MAR.shp")
 #all(st_is_valid(file1)) == FALSE
