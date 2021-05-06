@@ -37,8 +37,8 @@ aoi <- read_sf("ModelRuns/baseline_20200715/T_AOI_v4_5k_32616_pid.shp")
 
 anum <- "05" #05 = prot_mang, 06 = prot_corl
 aname <- "prot_mang"
-climate <- "clim0" #Baseline climate = clim0; 25th perc = clim1; 75th perc = clim2
-climshort <- "c0"
+climate <- "clim2" #Baseline climate = clim0; 25th perc = clim1; 75th perc = clim2
+climshort <- "c2"
 
 ipm <- paste0("ipm_", anum)
 
