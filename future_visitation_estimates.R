@@ -6,12 +6,15 @@
 ##`global_vis_over_time.R`
 
 library(tidyverse)
+library(RColorBrewer)
 
 modplot <- function(x){
   par(mfrow = c(2,2))
   plot(x, ask = F)
   par(mfrow = c(1,1))
 }
+
+dddd <- gsub("-", "", Sys.Date())
 
 setwd("~/Documents/MAR/")
 
@@ -74,13 +77,19 @@ mean(multipliers$multiplier) # 2.67
 # let's plot these
 brewer.pal(4, "Dark2")
 
+Mexico_color <- "#E7298A"
+Honduras_color <- "#7570B3"
+Belize_color <- "#1B9E77"
+Guatemala_color <- "#D95F02"
+
+
 ggplot() +
   geom_line(data = newdata, aes(x = year, y = Mexico/1000000), col = "#E7298A") +
   geom_point(data = mx, aes(x = year, y = visitors/1000000), col = "#E7298A") +
   scale_y_continuous(name = "Annual visitors (millions)") +
   labs(title = "Mexico") +
   theme_classic()
-ggsave("Deliverables/figs/futureVis/mx_trend.png", width = 3, height = 3, units = "in")
+#ggsave("Deliverables/figs/futureVis/mx_trend.png", width = 3, height = 3, units = "in")
 
 
 ggplot() +
@@ -89,7 +98,7 @@ ggplot() +
   scale_y_continuous(name = "Annual visitors (millions)") +
   labs(title = "Honduras") +
   theme_classic()
-ggsave("Deliverables/figs/futureVis/hn_trend.png", width = 3, height = 3, units = "in")
+#ggsave("Deliverables/figs/futureVis/hn_trend.png", width = 3, height = 3, units = "in")
 
 
 ggplot() +
@@ -98,7 +107,7 @@ ggplot() +
   scale_y_continuous(name = "Annual visitors (millions)") +
   labs(title = "Guatemala") +
   theme_classic()
-ggsave("Deliverables/figs/futureVis/gt_trend.png", width = 3, height = 3, units = "in")
+#ggsave("Deliverables/figs/futureVis/gt_trend.png", width = 3, height = 3, units = "in")
 
 
 ggplot() +
@@ -111,7 +120,7 @@ ggplot() +
   scale_y_continuous(name = "Annual visitors (millions)", breaks = c(1, 1.5, 2, 2.5, 3, 3.5)) +
   labs(title = "Belize") +
   theme_classic()
-ggsave("Deliverables/figs/futureVis/bz_trend.png", width = 3, height = 3, units = "in")
+#ggsave("Deliverables/figs/futureVis/bz_trend.png", width = 3, height = 3, units = "in")
 
 
 ggplot() +
@@ -170,7 +179,7 @@ ggplot(perc_change_avg) +
   theme_classic()
 
 # write it out
-ggsave("Deliverables/figs/percent_change_tourism.png", width = 6, height = 5, units = "in")
+#ggsave("Deliverables/figs/percent_change_tourism.png", width = 6, height = 5, units = "in")
 
 library(RColorBrewer)
 brewer.pal(4, "Dark2")
@@ -197,3 +206,93 @@ ggplot(perc_change) +
   facet_wrap(~ Country)
 
 # nope. better each on their own plot
+
+# Let's work on improving the panel percent change plot
+# Want to: add the average line to each plot
+# add the raw value scale to the right side of each subplot
+
+perc_range <- seq(-100, 300)
+
+ggplot(perc_change) +
+  geom_line(aes(x = year, y = prediction, col = Country)) +
+  geom_point(data = observed_perc_change, aes(x = year, y = visitors, col = Country)) +
+  scale_y_continuous(name = "Annual visitors (millions)", sec.axis = sec_axis(~ perc_range)) +
+  facet_wrap(~ Country, scales = "free_y")
+
+## Seems complicated to do with the facetwrap 
+
+# Trying individually
+ggplot() +
+  geom_line(data = newdata, aes(x = year, y = Mexico/1000000), col = "#E7298A") +
+  geom_point(data = mx, aes(x = year, y = visitors/1000000), col = "#E7298A") +
+  scale_y_continuous(name = "Annual visitors (millions)",
+                     sec.axis = sec_axis(~100*(1000000*. - preds_2017$Mexico) / preds_2017$Mexico)) +
+  labs(title = "Mexico") +
+  theme_classic()
+
+# reverse, to get the average line on here
+# BZ
+ggplot() +
+  geom_line(data = perc_change_avg %>% filter(Country %in% c("Average", "Belize")), 
+            aes(x = year, y = perc_change_2017, color = Country, linetype = Country)) +
+  geom_point(data = observed_perc_change %>% filter(Country == "Belize"), 
+             aes(x = year, y = perc_of_2017 - 100, col = Country)) +
+  scale_color_manual(name = NULL, values = c("black", Belize_color)) +
+  scale_linetype_manual(name = NULL, values = c(1, 2, NA, NA, NA)) +
+  scale_y_continuous(name = "Percent Change in Visitation from 2017", limits = c(-50, 200),
+                     sec.axis = sec_axis(name = "Annual visitors (millions)",
+                                         ~((.*preds_2017$Belize / (100)) + preds_2017$Belize) / 1000000,
+                                        breaks = c(1, 1.5, 2, 2.5, 3, 3.5, 4))) +
+  scale_x_continuous(name = "Year") +
+  theme_classic() +
+  theme(legend.position = c(.8, .15))
+ggsave(paste0("Deliverables/figs/futureVis/Belize_trend_", dddd, ".png"), width = 4, height = 3.5, units = "in")
+
+# MX
+ggplot() +
+  geom_line(data = perc_change_avg %>% filter(Country %in% c("Average", "Mexico")), 
+            aes(x = year, y = perc_change_2017, color = Country, linetype = Country)) +
+  geom_point(data = observed_perc_change %>% filter(Country == "Mexico"), 
+             aes(x = year, y = perc_of_2017 - 100, col = Country)) +
+  scale_color_manual(name = NULL, values = c("black", Mexico_color)) +
+  scale_linetype_manual(name = NULL, values = c(1, 2)) +
+  scale_y_continuous(name = "Percent Change in Visitation from 2017", limits = c(-50, 200),
+                     sec.axis = sec_axis(name = "Annual visitors (millions)",
+                                         ~((.*preds_2017$Mexico / (100)) + preds_2017$Mexico) / 1000000)) +
+  scale_x_continuous(name = "Year") +
+  theme_classic() +
+  theme(legend.position = c(.8, .15))
+ggsave(paste0("Deliverables/figs/futureVis/Mexico_trend_", dddd, ".png"), width = 4, height = 3.5, units = "in")
+
+# Guatemala
+ggplot() +
+  geom_line(data = perc_change_avg %>% filter(Country %in% c("Average", "Guatemala")), 
+            aes(x = year, y = perc_change_2017, color = Country, linetype = Country)) +
+  geom_point(data = observed_perc_change %>% filter(Country == "Guatemala"), 
+             aes(x = year, y = perc_of_2017 - 100, col = Country)) +
+  scale_color_manual(name = NULL, values = c("black", Guatemala_color)) +
+  scale_linetype_manual(name = NULL, values = c(1, 2)) +
+  scale_y_continuous(name = "Percent Change in Visitation from 2017", limits = c(-50, 200),
+                     sec.axis = sec_axis(name = "Annual visitors (millions)",
+                                         ~((.*preds_2017$Guatemala / (100)) + preds_2017$Guatemala) / 1000000)) +
+  scale_x_continuous(name = "Year") +
+  theme_classic() +
+  theme(legend.position = c(.8, .15))
+ggsave(paste0("Deliverables/figs/futureVis/Guatemala_trend_", dddd, ".png"), width = 4, height = 3.5, units = "in")
+
+# Honduras
+ggplot() +
+  geom_line(data = perc_change_avg %>% filter(Country %in% c("Average", "Honduras")), 
+            aes(x = year, y = perc_change_2017, color = Country, linetype = Country)) +
+  geom_point(data = observed_perc_change %>% filter(Country == "Honduras"), 
+             aes(x = year, y = perc_of_2017 - 100, col = Country)) +
+  scale_color_manual(name = NULL, values = c("black", Honduras_color)) +
+  scale_linetype_manual(name = NULL, values = c(1, 2)) +
+  scale_y_continuous(name = "Percent Change in Visitation from 2017", limits = c(-50, 200),
+                     sec.axis = sec_axis(name = "Annual visitors (millions)", 
+                                         ~((.*preds_2017$Honduras / (100)) + preds_2017$Honduras) / 1000000)) +
+  scale_x_continuous(name = "Year") +
+  theme_classic() +
+  theme(legend.position = c(.8, .15))
+ggsave(paste0("Deliverables/figs/futureVis/Honduras_trend_", dddd, ".png"), width = 4, height = 3.5, units = "in")
+
