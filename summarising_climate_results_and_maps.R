@@ -2,6 +2,103 @@
 ## NEED TO READ IN THE CLIMATE FILES FROM SCENARIOS/CLIMATE AND BIND THEM TOGETHER
 ## Then the following visualizing code should work well enough (and can be modified to be more useful)
 
+library(tidyverse)
+library(sf)
+library(scales)
+library(knitr)
+
+setwd("~/Documents/MAR/")
+dddd <- gsub("-", "", Sys.Date())
+
+aoi <- read_sf("GIS/AOI/AOI_v4/Tourism_AOI_v4.shp")
+coastline <- read_sf("GIS/BordersandProtectedAreas/mar_coastline.shp")
+aoi_32 <- st_transform(aoi, crs = 32616)
+
+clim1 <- read_sf("Scenarios/Climate/MARwide_climate_noact_rec_clim1.geojson")
+clim1
+# right... fitted_vis_current because it's meant to show current visitors, without the multiplier
+clim2 <- read_sf("Scenarios/Climate/MARwide_climate_noact_rec_clim2.geojson")
+
+## First, maybe try plotting current fitted vis?
+ggplot(clim1) +
+  geom_sf(aes(fill = fitted_vis_current), size = .01) +
+  scale_fill_distiller(palette = "Greens", 
+                       trans = "log10",
+                       direction = 1) +
+  geom_sf(data = aoi_32, fill = NA) +
+  #geom_sf(data = coastline) +
+  coord_sf(xlim = c(220000, 680000),
+           ylim = c(1705000, 2420000)) +
+  labs(title = "Baseline") +
+  theme_void() +
+  theme(#panel.border = element_rect(colour = "black", fill=NA, size=.5),
+        legend.background = element_rect(fill = "white"),
+        legend.margin = margin(2, 2, 7, 2),
+        legend.position = c(.82, .425),
+        plot.title = element_text(hjust = .5, size = 15))
+
+## Meh. I don't think I want to make this... let's just stick in one of the other estimates of current vistiation
+
+### What I do want, is maps of % change
+
+ggplot(clim1) +
+  geom_sf(aes(fill = perc_change), size = .01) +
+  scale_fill_gradientn(colours = c('#d7191c','#fdae61','#ffffbf','#abdda4','#2b83ba'),
+                       values = c(0, 
+                                  scales::rescale(0, from = c(min(clim1$perc_change),
+                                                              max(clim1$perc_change))),
+                                  1),
+                       name = "Tourism \n(% Change)",
+                       breaks = c(-100, -50, 0, 50, 100, 150, 200, 250),
+                       labels = percent_format(scale = 1, accuracy = 1)) +
+  geom_sf(data = aoi_32, fill = NA) +
+  geom_sf(data = coastline) +
+  coord_sf(xlim = c(260000, 670000),
+           ylim = c(1705000, 2420000)) +
+  labs(title = "RCP 8.5 2050s (25th Percentile)") +
+  theme_void() +
+  theme(#panel.border = element_rect(colour = "black", fill=NA, size=.5),
+    legend.background = element_rect(fill = "white"),
+    legend.margin = margin(3, 3, 3, 3),
+    legend.position = c(.82, .425),
+    plot.title = element_text(hjust = .5, size = 15))
+
+ggsave(paste0("Deliverables/figs/futureVis/perc_change_map_clim1_", dddd, ".png"), width = 6, height = 6.4, units = "in")
+plot_crop(paste0("Deliverables/figs/futureVis/perc_change_map_clim1_", dddd, ".png"))
+
+ggplot(clim2) +
+  geom_sf(aes(fill = perc_change), size = .01) +
+  scale_fill_gradientn(colours = c('#d7191c','#fdae61','#ffffbf','#abdda4','#2b83ba'),
+                       values = c(0, 
+                                  scales::rescale(0, from = c(min(clim2$perc_change),
+                                                              max(clim2$perc_change))),
+                                  1),
+                       name = "Tourism \n(% Change)",
+                       breaks = c(-100, -50, 0, 50, 100, 150, 200, 250),
+                       labels = percent_format(scale = 1, accuracy = 1)) +
+  geom_sf(data = aoi_32, fill = NA) +
+  geom_sf(data = coastline) +
+  coord_sf(xlim = c(260000, 670000),
+           ylim = c(1705000, 2420000)) +
+  labs(title = "RCP 8.5 2050s (75th Percentile)") +
+  theme_void() +
+  theme(#panel.border = element_rect(colour = "black", fill=NA, size=.5),
+    legend.background = element_rect(fill = "white"),
+    legend.margin = margin(3, 3, 3, 3),
+    legend.position = c(.82, .425),
+    plot.title = element_text(hjust = .5, size = 15))
+
+ggsave(paste0("Deliverables/figs/futureVis/perc_change_map_clim2_", dddd, ".png"), width = 6, height = 6.4, units = "in")
+plot_crop(paste0("Deliverables/figs/futureVis/perc_change_map_clim2_", dddd, ".png"))
+
+
+summary(clim1$perc_change)
+summary(clim2$perc_change)
+
+
+
+################# OLD #####################
+
 
 # visualizing the percent change
 ggplot(modeled_sp) +
