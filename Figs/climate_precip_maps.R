@@ -16,20 +16,14 @@ setwd("~/Documents/MAR/GIS/")
 # read in data
 aoi <- read_sf("AOI/AOI_v4/Tourism_AOI_v4.shp")
 coastline <- read_sf("BordersandProtectedAreas/mar_coastline.shp")
+aoi_32 <- st_transform(aoi, crs = 32616)
 
 precip_base <- raster("Predictors/Climate/Climate from Columbia/RastersSGW_WGS/PRECIP_BASELINE_corrected_2.tif",
                       band = 1)
 
-#coords <- xyFromCell(precip_base, seq_len(ncell(precip_base)))
-#precip_base <- stack(as.data.frame(getValues(precip_base)))
-#names(precip_base) <- c('value', 'variable')
-#
-#precip_base <- cbind(coords, precip_base)
-
-aoi_32 <- st_transform(aoi, crs = 32616)
-
 precip_base_df <- as.data.frame(precip_base, xy = TRUE)
 precip_base_df
+
 ggplot() +
   geom_raster(data = precip_base_df, aes(x = x, y = y, fill = PRECIP_BASELINE_corrected_2)) +
   geom_sf(data = aoi_32, fill = NA, col = "black") +
@@ -73,8 +67,8 @@ precip_perc_change <- precip_2050_25_df %>%
   full_join(precip_2050_75_df) %>%
   rename(precip_clim2 = Precip_RCP85_2050s_corrected) %>%
   mutate(perc_change1 = 100* (precip_clim1 - precip_clim0) / precip_clim0,
-         perc_change2 = 100* (precip_clim2 - precip_clim0) /precip_clim0) %>%
-  filter(!is.na(perc_change1))
+         perc_change2 = 100* (precip_clim2 - precip_clim0) /precip_clim0) #%>%
+  #filter(!is.na(perc_change1))
 
 precip_perc_change
 
@@ -125,5 +119,3 @@ ggplot() +
 # write it out
 ggsave("../Deliverables/figs/ClimateMaps/precip_clim2.png", width = 6, height = 6.4, units = "in")
 knitr::plot_crop("../Deliverables/figs/ClimateMaps/precip_clim2.png")
-
-# what about trying to do those in one, 
