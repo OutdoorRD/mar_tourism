@@ -95,6 +95,21 @@ plot_crop(paste0("Deliverables/figs/futureVis/perc_change_map_clim2_", dddd, ".p
 summary(clim1$perc_change)
 summary(clim2$perc_change)
 
+## calculate % change across the mar?
+clim1 %>%
+  st_drop_geometry() %>%
+  summarise_at(vars(fitted_vis_current, preds_vis_future), sum) %>%
+  mutate(perc_change = (preds_vis_future - fitted_vis_current) / (fitted_vis_current))
+# -28.7% change across the mar in clim1
+
+clim2 %>%
+  st_drop_geometry() %>%
+  summarise_at(vars(fitted_vis_current, preds_vis_future), sum) %>%
+  mutate(perc_change = (preds_vis_future - fitted_vis_current) / (fitted_vis_current))
+# -65% change in clim2
+
+
+
 
 
 ################# OLD #####################
