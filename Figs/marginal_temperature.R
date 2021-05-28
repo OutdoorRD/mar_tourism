@@ -5,6 +5,7 @@
 ### Forked from bottom of viz_model_clean.R on 7/29/20
 
 library(tidyverse)
+library(stringr)
 
 setwd("~/Documents/MAR/mar_tourism/")
 
@@ -42,7 +43,7 @@ ggplot(newdata_temp) +
 
 newdata_temp %>%
   arrange(desc(preds_vis))
-# peak vis at 24.6 
+# peak vis at 24.6 # 24.7 as of 5/28/21
 # this is invariant to changes in newdata, which just shift the line up or down, not side to side
 
 ## let's compare this marginal plot to our future temp data
@@ -53,6 +54,9 @@ climate_tall <- climate_vals %>%
                names_to = c("variable", "climate"), 
                names_pattern = "([:alpha:]*)([:digit:]*)",
                values_to = "measure")
+
+df <- data.frame(x = c("precip25", "temp75"))
+df %>% tidyr::extract(x, "([[:alpha:]]*)([[:digit:]]*)")
 
 ggplot(newdata_temp) +
   geom_line(aes(x = temp, y = preds_vis)) +
