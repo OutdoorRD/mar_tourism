@@ -21,23 +21,27 @@ clim2 <- read_sf("Scenarios/Climate/MARwide_climate_noact_rec_clim2.geojson")
 
 ## First, maybe try plotting current fitted vis?
 ggplot(clim1) +
-  geom_sf(aes(fill = fitted_vis_current), size = .01) +
-  scale_fill_distiller(palette = "Greens", 
-                       trans = "log10",
+  geom_sf(aes(fill = est_vis), size = .01) +
+  scale_fill_distiller(name = "Visitors in 2017 \n(Estimated)",
+                       palette = "Greens", 
+                       trans = "log1p",
+                       breaks = c(0, 10, 100, 1000, 10000, 100000),
+                       labels = label_comma(scale = 1, accuracy = 1),
                        direction = 1) +
   geom_sf(data = aoi_32, fill = NA) +
-  #geom_sf(data = coastline) +
-  coord_sf(xlim = c(220000, 680000),
+  geom_sf(data = coastline, size = .3, col = "gray25") +
+  coord_sf(xlim = c(260000, 670000),
            ylim = c(1705000, 2420000)) +
   labs(title = "Baseline") +
   theme_void() +
   theme(#panel.border = element_rect(colour = "black", fill=NA, size=.5),
         legend.background = element_rect(fill = "white"),
         legend.margin = margin(2, 2, 7, 2),
-        legend.position = c(.82, .425),
+        legend.position = c(.85, .425),
         plot.title = element_text(hjust = .5, size = 15))
 
-## Meh. I don't think I want to make this... let's just stick in one of the other estimates of current vistiation
+ggsave(paste0("Deliverables/figs/MAR_2017_estimated_vis_", dddd, ".png"), width = 6, height = 6.4, units = "in")
+plot_crop(paste0("Deliverables/figs/MAR_2017_estimated_vis_", dddd, ".png"))
 
 ### What I do want, is maps of % change
 
