@@ -1,6 +1,6 @@
-####### THIS IS ONLY THE SECOND HALF OF THE OLD SCRIPT...
-## NEED TO READ IN THE CLIMATE FILES FROM SCENARIOS/CLIMATE AND BIND THEM TOGETHER
-## Then the following visualizing code should work well enough (and can be modified to be more useful)
+#### Creates maps of % change under climate scenarios
+## Also planning to add bar charts of change
+### Updated 6/16/21
 
 library(tidyverse)
 library(sf)
@@ -40,8 +40,8 @@ ggplot(clim1) +
         legend.position = c(.85, .425),
         plot.title = element_text(hjust = .5, size = 15))
 
-ggsave(paste0("Deliverables/figs/MAR_2017_estimated_vis_", dddd, ".png"), width = 6, height = 6.4, units = "in")
-plot_crop(paste0("Deliverables/figs/MAR_2017_estimated_vis_", dddd, ".png"))
+#ggsave(paste0("Deliverables/figs/MAR_2017_estimated_vis_", dddd, ".png"), width = 6, height = 6.4, units = "in")
+#plot_crop(paste0("Deliverables/figs/MAR_2017_estimated_vis_", dddd, ".png"))
 
 ### What I do want, is maps of % change
 
@@ -67,8 +67,8 @@ ggplot(clim1) +
     legend.position = c(.82, .425),
     plot.title = element_text(hjust = .5, size = 15))
 
-ggsave(paste0("Deliverables/figs/futureVis/perc_change_map_clim1_", dddd, ".png"), width = 6, height = 6.4, units = "in")
-plot_crop(paste0("Deliverables/figs/futureVis/perc_change_map_clim1_", dddd, ".png"))
+#ggsave(paste0("Deliverables/figs/futureVis/perc_change_map_clim1_", dddd, ".png"), width = 6, height = 6.4, units = "in")
+#plot_crop(paste0("Deliverables/figs/futureVis/perc_change_map_clim1_", dddd, ".png"))
 
 ggplot(clim2) +
   geom_sf(aes(fill = perc_change), size = .01) +
@@ -92,8 +92,8 @@ ggplot(clim2) +
     legend.position = c(.82, .425),
     plot.title = element_text(hjust = .5, size = 15))
 
-ggsave(paste0("Deliverables/figs/futureVis/perc_change_map_clim2_", dddd, ".png"), width = 6, height = 6.4, units = "in")
-plot_crop(paste0("Deliverables/figs/futureVis/perc_change_map_clim2_", dddd, ".png"))
+#ggsave(paste0("Deliverables/figs/futureVis/perc_change_map_clim2_", dddd, ".png"), width = 6, height = 6.4, units = "in")
+#plot_crop(paste0("Deliverables/figs/futureVis/perc_change_map_clim2_", dddd, ".png"))
 
 
 summary(clim1$perc_change)
@@ -112,9 +112,64 @@ clim2 %>%
   mutate(perc_change = (preds_vis_future - fitted_vis_current) / (fitted_vis_current))
 # -65% change in clim2
 
+#####
+### Ok, let's also try plotting absolute change
+library(ggallin)
 
+ggplot(clim1) +
+  geom_sf(aes(fill = diff_vis), size = .01) +
+  scale_fill_gradientn(colours = c('#d7191c','#fdae61','#ffffbf','#abdda4','#2b83ba'),
+                       trans = pseudolog10_trans,
+                       values = c(0, 
+                                  scales::rescale(0, from = c(min(asinh(clim1$diff_vis/2)/log(10)),
+                                                              max(asinh(clim1$diff_vis/2)/log(10)))),
+                                  1),
+                       name = "Tourism \n(Annual Change)",
+                       breaks = c(-50000, -1000, 0, 1000)#,
+                       #labels = percent_format(scale = 1, accuracy = 1)
+                       ) +
+  geom_sf(data = aoi_32, fill = NA) +
+  #geom_sf(data = coastline) +
+  coord_sf(xlim = c(260000, 670000),
+           ylim = c(1705000, 2420000)) +
+  labs(title = "RCP 8.5 2050s (25th Percentile)") +
+  theme_void() +
+  theme(#panel.border = element_rect(colour = "black", fill=NA, size=.5),
+    legend.background = element_rect(fill = "white"),
+    legend.margin = margin(3, 3, 3, 3),
+    legend.position = c(.82, .425),
+    plot.title = element_text(hjust = .5, size = 15))
 
+ggsave(paste0("Deliverables/figs/futureVis/absolute_change_map_clim1_", dddd, ".png"), width = 6, height = 6.4, units = "in")
+plot_crop(paste0("Deliverables/figs/futureVis/absolute_change_map_clim1_", dddd, ".png"))
 
+## clim 2
+ggplot(clim2) +
+  geom_sf(aes(fill = diff_vis), size = .01) +
+  scale_fill_gradientn(colours = c('#d7191c','#fdae61','#ffffbf','#abdda4','#2b83ba'),
+                       trans = pseudolog10_trans,
+                       values = c(0, 
+                                  scales::rescale(0, from = c(min(asinh(clim2$diff_vis/2)/log(10)),
+                                                              max(asinh(clim2$diff_vis/2)/log(10)))),
+                                  1),
+                       name = "Tourism \n(Annual Change)",
+                       breaks = c(-50000, -1000, 0, 1000)#,
+                       #labels = percent_format(scale = 1, accuracy = 1)
+  ) +
+  geom_sf(data = aoi_32, fill = NA) +
+  #geom_sf(data = coastline) +
+  coord_sf(xlim = c(260000, 670000),
+           ylim = c(1705000, 2420000)) +
+  labs(title = "RCP 8.5 2050s (75th Percentile)") +
+  theme_void() +
+  theme(#panel.border = element_rect(colour = "black", fill=NA, size=.5),
+    legend.background = element_rect(fill = "white"),
+    legend.margin = margin(3, 3, 3, 3),
+    legend.position = c(.82, .425),
+    plot.title = element_text(hjust = .5, size = 15))
+
+ggsave(paste0("Deliverables/figs/futureVis/absolute_change_map_clim2_", dddd, ".png"), width = 6, height = 6.4, units = "in")
+plot_crop(paste0("Deliverables/figs/futureVis/absolute_change_map_clim2_", dddd, ".png"))
 
 ################# OLD #####################
 
