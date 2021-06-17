@@ -125,11 +125,11 @@ ggplot(clim1) +
                                                               max(asinh(clim1$diff_vis/2)/log(10)))),
                                   1),
                        name = "Tourism \n(Annual Change)",
-                       breaks = c(-50000, -1000, 0, 1000)#,
+                       breaks = c(-50000, -1000, -50, 0, 50, 1000)#,
                        #labels = percent_format(scale = 1, accuracy = 1)
                        ) +
   geom_sf(data = aoi_32, fill = NA) +
-  #geom_sf(data = coastline) +
+  geom_sf(data = coastline, size = .2, col = "gray50") +
   coord_sf(xlim = c(260000, 670000),
            ylim = c(1705000, 2420000)) +
   labs(title = "RCP 8.5 2050s (25th Percentile)") +
@@ -153,11 +153,11 @@ ggplot(clim2) +
                                                               max(asinh(clim2$diff_vis/2)/log(10)))),
                                   1),
                        name = "Tourism \n(Annual Change)",
-                       breaks = c(-50000, -1000, 0, 1000)#,
+                       breaks = c(-50000, -1000, -50, 0, 50, 1000)#,
                        #labels = percent_format(scale = 1, accuracy = 1)
   ) +
   geom_sf(data = aoi_32, fill = NA) +
-  #geom_sf(data = coastline) +
+  geom_sf(data = coastline, size = .2, col = "gray50") +
   coord_sf(xlim = c(260000, 670000),
            ylim = c(1705000, 2420000)) +
   labs(title = "RCP 8.5 2050s (75th Percentile)") +
@@ -170,6 +170,213 @@ ggplot(clim2) +
 
 ggsave(paste0("Deliverables/figs/futureVis/absolute_change_map_clim2_", dddd, ".png"), width = 6, height = 6.4, units = "in")
 plot_crop(paste0("Deliverables/figs/futureVis/absolute_change_map_clim2_", dddd, ".png"))
+
+##########
+### Ok. And, let's make some bar charts, and test country/mpa level maps
+
+clim1
+# first I need to create a single tibble w/ current, fitted, and future for both climates
+clim_comb <- clim1 %>%
+  mutate(climate = "clim1") %>%
+  bind_rows(clim2 %>% mutate(climate = "clim2"))
+
+# first, let's calculate the mar wide summaries
+mar_summaries <- clim_comb %>%
+  st_drop_geometry() %>%
+  group_by(climate) %>%
+  summarise_at(vars(est_vis, fitted_vis_current, preds_vis_future), sum) %>%
+  mutate(perc_change = (preds_vis_future - fitted_vis_current) / (fitted_vis_current))
+
+ggplot(mar_summaries) +
+  geom_col(aes(x = climate, y = preds_vis_future))
+
+## let's make a column for without climate change, and also stack these
+
+# by hand, cuz it's tricky
+mar_tall <- mar_summaries %>%
+  select(climate, preds_vis_future) %>%
+  bind_rows(tibble(climate = c("clim0", "current"), 
+                   preds_vis_future = c(mar_summaries$fitted_vis_current[1]*2.67,
+                                        mar_summaries$fitted_vis_current[1])))
+ggplot(mar_tall) +
+  geom_col(aes(x = climate, y = preds_vis_future))
+
+## Note that my fitted vis is 1/4 of the "estimated" current vis. 
+## Question: is it legit to use the calculated % changes and then apply them to the estimated vis numbers???
+
+## Then I could make plots that would have the numbers which are more familiar to people
+
+## let's see
+# Mar wide
+mar_summaries
+# I estimate ~8 million visitors
+
+mar_tall_from_est_vis <- tibble(current = mar_summaries$est_vis[1],
+       clim0 = current*2.67,
+       clim1 = current*as.numeric(1+mar_summaries[mar_summaries$climate == "clim1", "perc_change"]),
+       clim2 = current*as.numeric(1+mar_summaries[mar_summaries$climate == "clim2", "perc_change"])) %>%
+  pivot_longer(everything(), names_to = "climate", values_to = "estimated_visitors") %>%
+  mutate(climate = fct_relevel(climate, levels = c("current", "clim0", "clim1", "clim2")))
+
+ggplot(mar_tall_from_est_vis) +
+  geom_col(aes(x = climate, y = estimated_visitors))
+# Ok. really the same thing, just with a new legend.
+
+ggplot(mar_tall_from_est_vis) +
+  geom_col(aes(x = climate, y = (estimated_visitors/1000000), fill = climate), position = "dodge") +
+  scale_x_discrete(name = "Time & Climate Scenario",
+                   labels = c("2017", "2050 \n(No climate change)", 
+                              "2050 \n(25th Percentile)", "2050 \n(75th Percentile)")) +
+  scale_y_continuous(name = "Estimated Annual Visitors (millions)") +
+  scale_fill_brewer(palette = "Paired", direction = -1, guide = NULL) +
+  labs(title = paste0("Visitation to the MAR region")) +
+  theme_classic()
+ggsave(paste0("Deliverables/figs/futureVis/abs_change_barchart_MAR.png"), width = 5, height = 4, units = "in")
+
+# can I do the same thing easily at smaller scales?
+
+# countries?
+country_summaries <- clim_comb %>%
+  st_drop_geometry() %>%
+  group_by(climate, CNTRY_NAME) %>%
+  summarise_at(vars(est_vis, fitted_vis_current, preds_vis_future), sum) %>%
+  mutate(perc_change = (preds_vis_future - fitted_vis_current) / (fitted_vis_current))
+country_summaries
+
+# ok... let's calculate future estimates
+country_tall_from_est_vis <- country_summaries %>%
+  pivot_wider(-c(fitted_vis_current, preds_vis_future), names_from = "climate", values_from = "perc_change") %>%
+  rename(current = est_vis) %>%
+  mutate(clim0 = current*2.67,
+         clim1 = current*(1+ clim1),
+         clim2 = current*(1 +clim2)) %>%
+  pivot_longer(-c(CNTRY_NAME), names_to = "climate", values_to = "estimated_visitors") %>%
+  mutate(climate = fct_relevel(climate, levels = c("current", "clim0", "clim1", "clim2")))
+
+
+ggplot(country_tall_from_est_vis) +
+  geom_col(aes(x = CNTRY_NAME, y = estimated_visitors, fill = climate), position = "dodge") +
+  facet_wrap(~CNTRY_NAME, scales = "free")
+
+
+
+### Ok, this is feeling ok
+
+# let's clean them up and make one per country
+
+country <- "Mexico"
+countries <- c("Belize", "Mexico", "Honduras", "Guatemala")
+for(country in countries){
+  ggplot(country_tall_from_est_vis %>% filter(CNTRY_NAME == country)) +
+    geom_col(aes(x = climate, y = (estimated_visitors/1000000), fill = climate), position = "dodge") +
+    scale_x_discrete(name = "Time & Climate Scenario",
+                     labels = c("2017", "2050 \n(No climate change)", 
+                                "2050 \n(25th Percentile)", "2050 \n(75th Percentile)")) +
+    scale_y_continuous(name = "Estimated Annual Visitors (millions)") +
+    scale_fill_brewer(palette = "Paired", direction = -1, guide = NULL) +
+    labs(title = paste0("Visitation to the MAR region of ", country)) +
+    theme_classic()
+  ggsave(paste0("Deliverables/figs/futureVis/abs_change_barchart_", country, ".png"), width = 5, height = 4, units = "in") 
+}
+
+## how about at the MPA level?
+# first, I need to read in a joinkey that has the mpa names
+aoi_grid <- read_sf("ModelRuns/baseline_20200715/T_AOI_v4_5k_32616_pid.shp") %>% 
+  st_drop_geometry() %>%
+  select(-area)
+# and the short names
+# Read in list of short MPA names
+mpas <- read_csv("ModelRuns/baseline_20200715/listofMPAs_v2.csv")
+
+aoi_grid
+
+# join it on, then calculate % changes
+mpa_summaries <- clim_comb %>%
+  left_join(aoi_grid) %>%
+  left_join(mpas %>% select(-Country), by = c("name_2" = "NAME")) %>%
+  st_drop_geometry() %>%
+  group_by(climate, CNTRY_NAME, MPA = Name_short) %>%
+  summarise_at(vars(est_vis, fitted_vis_current, preds_vis_future), sum) %>%
+  mutate(perc_change = (preds_vis_future - fitted_vis_current) / (fitted_vis_current))
+mpa_summaries
+
+## ok. let's just start by looking at est_vis vs fitted_vis
+# how about plotting % change?
+
+ggplot(mpa_summaries) +
+  geom_col(aes(x = MPA, y = perc_change, fill = climate), position = "dodge") +
+  coord_flip() 
+
+## ok, clean this up and write out by country
+country <- "Guatemala"
+countries <- c("Belize", "Mexico", "Honduras", "Guatemala")
+for(country in countries){
+    ggplot(mpa_summaries %>% filter(CNTRY_NAME == country, !is.na(MPA))) +
+    geom_col(aes(x = reorder(MPA, perc_change), y = perc_change*100, fill = rev(climate)), position = "dodge") +
+    geom_hline(yintercept = 0) +
+    scale_fill_brewer(name = "Climate (RCP 8.5 2050s)",
+                      palette = "Paired", breaks = c("clim1", "clim2"), 
+                      labels = c("75th Percentile", "25th Percentile"), # note this is backwards because of reverse above
+                      guide = guide_legend(reverse = TRUE)) +
+    scale_y_continuous(name = "Percent Change from 2017", labels = percent_format(scale = 1, accuracy = 1)) +
+    scale_x_discrete(name = NULL) +
+    labs(title = paste0("Estimated % Change to ", country, " MPAs")) +
+    coord_flip() +
+    theme_classic()
+  
+  # write it out
+  ggsave(paste0("Deliverables/figs/futureVis/perc_change_barchart_", country, ".png"), width = 7, height = 5, units = "in")
+}
+
+
+#### country level maps
+# it would be good to make country level maps
+mpa_boundaries <- read_sf("~/Documents/MAR/GIS/BordersandProtectedAreas/MPA/MPA_Updates_July_2020/MPA_Network_WGS8416N_v3.shp")
+
+# Mexico clim1
+ggplot(clim1 %>% filter(CNTRY_NAME == "Mexico")) +
+  geom_sf(aes(fill = perc_change), size = .01) +
+  scale_fill_gradientn(colours = c('#d7191c','#fdae61','#ffffbf','#abdda4','#2b83ba'),
+                       values = c(0, 
+                                  scales::rescale(0, from = c(min(clim1$perc_change),
+                                                              max(clim1$perc_change))),
+                                  1),
+                       name = "Tourism \n(% Change)",
+                       breaks = c(-100, -50, 0, 50, 100, 150, 200, 250),
+                       labels = percent_format(scale = 1, accuracy = 1)) +
+  geom_sf(data = coastline, col = "gray50") +
+  geom_sf(data = mpa_boundaries, fill = NA, col = "black", lwd = .5) +
+ # geom_sf(data = aoi_32, fill = NA) +
+  coord_sf(xlim = c(-89.0, -86.2), ylim = c(20.8, 22.25), crs = 4326) +
+  labs(title = "RCP 8.5 2050s (25th Percentile)") +
+  theme_void() +
+  theme(#panel.border = element_rect(colour = "black", fill=NA, size=.5),
+    legend.background = element_rect(fill = "white"),
+    legend.margin = margin(3, 3, 3, 3),
+    #legend.position = c(.82, .425),
+    plot.title = element_text(hjust = .5, size = 15))
+## not used yet...
+
+####### maybes...
+# ok, and then doing the estimated number of people?
+# ok... let's calculate future estimates
+mpa_tall_from_est_vis <- mpa_summaries %>%
+  pivot_wider(-c(fitted_vis_current, preds_vis_future), names_from = "climate", values_from = "perc_change") %>%
+  rename(current = est_vis) %>%
+  mutate(clim0 = current*2.67,
+         clim1 = current*(1+ clim1),
+         clim2 = current*(1 +clim2)) %>%
+  pivot_longer(-c(CNTRY_NAME, MPA), names_to = "climate", values_to = "estimated_visitors")
+mpa_tall_from_est_vis
+
+ggplot(mpa_tall_from_est_vis %>% filter(!is.na(MPA), climate != "clim0")) +
+  geom_col(aes(x = MPA, y = estimated_visitors, fill = climate), position = "dodge") +
+  facet_wrap(~CNTRY_NAME, scales = "free")
+
+# just BZ
+ggplot(mpa_tall_from_est_vis %>% filter(!is.na(MPA), climate != "clim0", CNTRY_NAME == "Belize")) +
+  geom_col(aes(x = MPA, y = estimated_visitors, fill = climate), position = "dodge") +
+  coord_flip()
 
 ################# OLD #####################
 
