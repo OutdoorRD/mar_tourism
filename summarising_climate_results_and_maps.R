@@ -357,6 +357,245 @@ ggplot(clim1 %>% filter(CNTRY_NAME == "Mexico")) +
     plot.title = element_text(hjust = .5, size = 15))
 ## not used yet...
 
+# is absolute better?
+
+### Mexico Clim2
+
+ggplot(clim2 %>% filter(CNTRY_NAME == "Mexico")) +
+  geom_sf(aes(fill = diff_vis), size = .01) +
+  scale_fill_gradientn(colours = c('#d7191c','#fdae61','#ffffbf','#abdda4','#2b83ba'),
+                       trans = pseudolog10_trans,
+                       values = c(0, 
+                                  scales::rescale(0, from = c(min(asinh(clim2[clim2$CNTRY_NAME=="Mexico",]$diff_vis/2)/log(10)),
+                                                              max(asinh(clim2[clim2$CNTRY_NAME=="Mexico",]$diff_vis/2)/log(10)))),
+                                  1),
+                       name = "Tourism \n(Annual Change)",
+                       breaks = c(-50000, -1000, -50, 0, 5, 50, 1000)#,
+                       #labels = percent_format(scale = 1, accuracy = 1)
+  ) +
+  geom_sf(data = aoi_32, fill = NA) +
+  geom_sf(data = mpa_boundaries, fill = NA, col = "black", lwd = .5) +
+  geom_sf(data = coastline, size = .2, col = "gray50") +
+  # geom_sf(data = aoi_32, fill = NA) +
+  coord_sf(xlim = c(-89.0, -86.2), ylim = c(20.8, 22.25), crs = 4326) +
+  labs(title = "RCP 8.5 2050s (75th Percentile)") +
+  theme_void() +
+  theme(#panel.border = element_rect(colour = "black", fill=NA, size=.5),
+    legend.background = element_rect(fill = "white"),
+    legend.margin = margin(3, 3, 3, 3),
+    #legend.position = c(.82, .425),
+    plot.title = element_text(hjust = .5, size = 15))
+
+ggsave(paste0("Deliverables/figs/futureVis/absolute_change_map_clim2_Mexico_", dddd, ".png"), width = 6, height = 6.4, units = "in")
+plot_crop(paste0("Deliverables/figs/futureVis/absolute_change_map_clim2_Mexico_", dddd, ".png"))
+
+## Mexico clim1
+ggplot(clim1 %>% filter(CNTRY_NAME == "Mexico")) +
+  geom_sf(aes(fill = diff_vis), size = .01) +
+  scale_fill_gradientn(colours = c('#d7191c','#fdae61','#ffffbf','#abdda4','#2b83ba'),
+                       trans = pseudolog10_trans,
+                       values = c(0, 
+                                  scales::rescale(0, from = c(min(asinh(clim1[clim1$CNTRY_NAME=="Mexico",]$diff_vis/2)/log(10)),
+                                                              max(asinh(clim1[clim1$CNTRY_NAME=="Mexico",]$diff_vis/2)/log(10)))),
+                                  1),
+                       name = "Tourism \n(Annual Change)",
+                       breaks = c(-50000, -1000, -50, 0, 5, 50, 1000)#,
+                       #labels = percent_format(scale = 1, accuracy = 1)
+  ) +
+  geom_sf(data = aoi_32, fill = NA) +
+  geom_sf(data = mpa_boundaries, fill = NA, col = "black", lwd = .5) +
+  geom_sf(data = coastline, size = .2, col = "gray50") +
+  # geom_sf(data = aoi_32, fill = NA) +
+  coord_sf(xlim = c(-89.0, -86.2), ylim = c(20.8, 22.25), crs = 4326) +
+  labs(title = "RCP 8.5 2050s (25th Percentile)") +
+  theme_void() +
+  theme(#panel.border = element_rect(colour = "black", fill=NA, size=.5),
+    legend.background = element_rect(fill = "white"),
+    legend.margin = margin(3, 3, 3, 3),
+    #legend.position = c(.82, .425),
+    plot.title = element_text(hjust = .5, size = 15))
+
+ggsave(paste0("Deliverables/figs/futureVis/absolute_change_map_clim1_Mexico_", dddd, ".png"), width = 6, height = 6.4, units = "in")
+plot_crop(paste0("Deliverables/figs/futureVis/absolute_change_map_clim1_Mexico_", dddd, ".png"))
+
+### Belize clim2
+ggplot(clim2 %>% filter(CNTRY_NAME == "Belize")) +
+  geom_sf(aes(fill = diff_vis), size = .01) +
+  scale_fill_gradientn(colours = c('#d7191c','#fdae61','#ffffbf','#abdda4','#2b83ba'),
+                       trans = pseudolog10_trans,
+                       values = c(0, 
+                                  scales::rescale(0, from = c(min(asinh(clim2[clim2$CNTRY_NAME=="Belize",]$diff_vis/2)/log(10)),
+                                                              max(asinh(clim2[clim2$CNTRY_NAME=="Belize",]$diff_vis/2)/log(10)))),
+                                  1),
+                       name = "Tourism \n(Annual Change)",
+                       breaks = c(-50000, -1000, -50, 0, 5, 50, 1000)#,
+                       #labels = percent_format(scale = 1, accuracy = 1)
+  ) +
+  geom_sf(data = aoi_32, fill = NA) +
+  geom_sf(data = mpa_boundaries, fill = NA, col = "black", lwd = .5) +
+  geom_sf(data = coastline, size = .2, col = "gray50") +
+  # geom_sf(data = aoi_32, fill = NA) +
+  coord_sf(xlim = c(-89.5, -87), ylim = c(15.75, 18.5), crs = 4326) +
+  labs(title = "RCP 8.5 2050s (75th Percentile)") +
+  theme_void() +
+  theme(#panel.border = element_rect(colour = "black", fill=NA, size=.5),
+    legend.background = element_rect(fill = "white"),
+    legend.margin = margin(3, 3, 3, 3),
+    #legend.position = c(.82, .425),
+    plot.title = element_text(hjust = .5, size = 15))
+
+ggsave(paste0("Deliverables/figs/futureVis/absolute_change_map_clim2_Belize_", dddd, ".png"), width = 6, height = 6.4, units = "in")
+plot_crop(paste0("Deliverables/figs/futureVis/absolute_change_map_clim2_Belize_", dddd, ".png"))
+
+## Belize clim1
+### Belize clim1
+ggplot(clim1 %>% filter(CNTRY_NAME == "Belize")) +
+  geom_sf(aes(fill = diff_vis), size = .01) +
+  scale_fill_gradientn(colours = c('#d7191c','#fdae61','#ffffbf','#abdda4','#2b83ba'),
+                       trans = pseudolog10_trans,
+                       values = c(0, 
+                                  scales::rescale(0, from = c(min(asinh(clim1[clim1$CNTRY_NAME=="Belize",]$diff_vis/2)/log(10)),
+                                                              max(asinh(clim1[clim1$CNTRY_NAME=="Belize",]$diff_vis/2)/log(10)))),
+                                  1),
+                       name = "Tourism \n(Annual Change)",
+                       breaks = c(-50000, -1000, -50, 0, 5, 50, 1000)#,
+                       #labels = percent_format(scale = 1, accuracy = 1)
+  ) +
+  geom_sf(data = aoi_32, fill = NA) +
+  geom_sf(data = mpa_boundaries, fill = NA, col = "black", lwd = .5) +
+  geom_sf(data = coastline, size = .2, col = "gray50") +
+  # geom_sf(data = aoi_32, fill = NA) +
+  coord_sf(xlim = c(-89.5, -87), ylim = c(15.75, 18.5), crs = 4326) +
+  labs(title = "RCP 8.5 2050s (25th Percentile)") +
+  theme_void() +
+  theme(#panel.border = element_rect(colour = "black", fill=NA, size=.5),
+    legend.background = element_rect(fill = "white"),
+    legend.margin = margin(3, 3, 3, 3),
+    #legend.position = c(.82, .425),
+    plot.title = element_text(hjust = .5, size = 15))
+
+ggsave(paste0("Deliverables/figs/futureVis/absolute_change_map_clim1_Belize_", dddd, ".png"), width = 6, height = 6.4, units = "in")
+plot_crop(paste0("Deliverables/figs/futureVis/absolute_change_map_clim1_Belize_", dddd, ".png"))
+
+### Guatemala clim2
+### Guatemala clim2
+ggplot(clim2 %>% filter(CNTRY_NAME == "Guatemala")) +
+  geom_sf(aes(fill = diff_vis), size = .01) +
+  scale_fill_gradientn(colours = c('#d7191c','#fdae61','#ffffbf','#abdda4','#2b83ba'),
+                       trans = pseudolog10_trans,
+                       values = c(0, 
+                                  scales::rescale(0, from = c(min(asinh(clim2[clim2$CNTRY_NAME=="Guatemala",]$diff_vis/2)/log(10)),
+                                                              max(asinh(clim2[clim2$CNTRY_NAME=="Guatemala",]$diff_vis/2)/log(10)))),
+                                  1),
+                       name = "Tourism \n(Annual Change)",
+                       breaks = c(-50000, -1000, -50, 0, 5, 50, 1000)#,
+                       #labels = percent_format(scale = 1, accuracy = 1)
+  ) +
+  geom_sf(data = aoi_32, fill = NA) +
+  geom_sf(data = mpa_boundaries, fill = NA, col = "black", lwd = .5) +
+  geom_sf(data = coastline, size = .2, col = "gray50") +
+  # geom_sf(data = aoi_32, fill = NA) +
+  coord_sf(xlim = c(-89.5, -88.2), ylim = c(15.25, 16.2), crs = 4326) +
+  labs(title = "RCP 8.5 2050s (75th Percentile)") +
+  theme_void() +
+  theme(#panel.border = element_rect(colour = "black", fill=NA, size=.5),
+    legend.background = element_rect(fill = "white"),
+    legend.margin = margin(3, 3, 3, 3),
+    #legend.position = c(.82, .425),
+    plot.title = element_text(hjust = .5, size = 15))
+
+ggsave(paste0("Deliverables/figs/futureVis/absolute_change_map_clim2_Guatemala_", dddd, ".png"), width = 6, height = 6.4, units = "in")
+plot_crop(paste0("Deliverables/figs/futureVis/absolute_change_map_clim2_Guatemala_", dddd, ".png"))
+
+### Guatemala clim1
+ggplot(clim1 %>% filter(CNTRY_NAME == "Guatemala")) +
+  geom_sf(aes(fill = diff_vis), size = .01) +
+  scale_fill_gradientn(colours = c('#d7191c','#fdae61','#ffffbf','#abdda4','#2b83ba'),
+                       trans = pseudolog10_trans,
+                       values = c(0, 
+                                  scales::rescale(0, from = c(min(asinh(clim1[clim1$CNTRY_NAME=="Guatemala",]$diff_vis/2)/log(10)),
+                                                              max(asinh(clim1[clim1$CNTRY_NAME=="Guatemala",]$diff_vis/2)/log(10)))),
+                                  1),
+                       name = "Tourism \n(Annual Change)",
+                       breaks = c(-50000, -1000, -50, 0, 5, 50, 1000)#,
+                       #labels = percent_format(scale = 1, accuracy = 1)
+  ) +
+  geom_sf(data = aoi_32, fill = NA) +
+  geom_sf(data = mpa_boundaries, fill = NA, col = "black", lwd = .5) +
+  geom_sf(data = coastline, size = .2, col = "gray50") +
+  # geom_sf(data = aoi_32, fill = NA) +
+  coord_sf(xlim = c(-89.5, -88.2), ylim = c(15.25, 16.2), crs = 4326) +
+  labs(title = "RCP 8.5 2050s (25th Percentile)") +
+  theme_void() +
+  theme(#panel.border = element_rect(colour = "black", fill=NA, size=.5),
+    legend.background = element_rect(fill = "white"),
+    legend.margin = margin(3, 3, 3, 3),
+    #legend.position = c(.82, .425),
+    plot.title = element_text(hjust = .5, size = 15))
+
+ggsave(paste0("Deliverables/figs/futureVis/absolute_change_map_clim1_Guatemala_", dddd, ".png"), width = 6, height = 6.4, units = "in")
+plot_crop(paste0("Deliverables/figs/futureVis/absolute_change_map_clim1_Guatemala_", dddd, ".png"))
+
+
+### Honduras
+###  clim2
+ggplot(clim2 %>% filter(CNTRY_NAME == "Honduras")) +
+  geom_sf(aes(fill = diff_vis), size = .01) +
+  scale_fill_gradientn(colours = c('#d7191c','#fdae61','#ffffbf','#abdda4','#2b83ba'),
+                       trans = pseudolog10_trans,
+                       values = c(0, 
+                                  scales::rescale(0, from = c(min(asinh(clim2[clim2$CNTRY_NAME=="Honduras",]$diff_vis/2)/log(10)),
+                                                              max(asinh(clim2[clim2$CNTRY_NAME=="Honduras",]$diff_vis/2)/log(10)))),
+                                  1),
+                       name = "Tourism \n(Annual Change)",
+                       breaks = c(-50000, -1000, -50, 0, 5, 50, 1000)#,
+                       #labels = percent_format(scale = 1, accuracy = 1)
+  ) +
+  geom_sf(data = aoi_32, fill = NA) +
+  geom_sf(data = mpa_boundaries, fill = NA, col = "black", lwd = .5) +
+  geom_sf(data = coastline, size = .2, col = "gray50") +
+  # geom_sf(data = aoi_32, fill = NA) +
+  coord_sf(xlim = c(-88.6, -85.65), ylim = c(15.25, 16.75), crs = 4326) +
+  labs(title = "RCP 8.5 2050s (75th Percentile)") +
+  theme_void() +
+  theme(#panel.border = element_rect(colour = "black", fill=NA, size=.5),
+    legend.background = element_rect(fill = "white"),
+    legend.margin = margin(3, 3, 3, 3),
+    #legend.position = c(.82, .425),
+    plot.title = element_text(hjust = .5, size = 15))
+
+ggsave(paste0("Deliverables/figs/futureVis/absolute_change_map_clim2_Honduras_", dddd, ".png"), width = 6, height = 6.4, units = "in")
+plot_crop(paste0("Deliverables/figs/futureVis/absolute_change_map_clim2_Honduras_", dddd, ".png"))
+
+### honduras clim2
+ggplot(clim1 %>% filter(CNTRY_NAME == "Honduras")) +
+  geom_sf(aes(fill = diff_vis), size = .01) +
+  scale_fill_gradientn(colours = c('#d7191c','#fdae61','#ffffbf','#abdda4','#2b83ba'),
+                       trans = pseudolog10_trans,
+                       values = c(0, 
+                                  scales::rescale(0, from = c(min(asinh(clim1[clim1$CNTRY_NAME=="Honduras",]$diff_vis/2)/log(10)),
+                                                              max(asinh(clim1[clim1$CNTRY_NAME=="Honduras",]$diff_vis/2)/log(10)))),
+                                  1),
+                       name = "Tourism \n(Annual Change)",
+                       breaks = c(-50000, -1000, -50, 0, 5, 50, 1000)#,
+                       #labels = percent_format(scale = 1, accuracy = 1)
+  ) +
+  geom_sf(data = aoi_32, fill = NA) +
+  geom_sf(data = mpa_boundaries, fill = NA, col = "black", lwd = .5) +
+  geom_sf(data = coastline, size = .2, col = "gray50") +
+  # geom_sf(data = aoi_32, fill = NA) +
+  coord_sf(xlim = c(-88.6, -85.65), ylim = c(15.25, 16.75), crs = 4326) +
+  labs(title = "RCP 8.5 2050s (25th Percentile)") +
+  theme_void() +
+  theme(#panel.border = element_rect(colour = "black", fill=NA, size=.5),
+    legend.background = element_rect(fill = "white"),
+    legend.margin = margin(3, 3, 3, 3),
+    #legend.position = c(.82, .425),
+    plot.title = element_text(hjust = .5, size = 15))
+
+ggsave(paste0("Deliverables/figs/futureVis/absolute_change_map_clim1_Honduras_", dddd, ".png"), width = 6, height = 6.4, units = "in")
+plot_crop(paste0("Deliverables/figs/futureVis/absolute_change_map_clim1_Honduras_", dddd, ".png"))
+
 ####### maybes...
 # ok, and then doing the estimated number of people?
 # ok... let's calculate future estimates
