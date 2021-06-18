@@ -13,6 +13,7 @@ dddd <- gsub("-", "", Sys.Date())
 aoi <- read_sf("GIS/AOI/AOI_v4/Tourism_AOI_v4.shp")
 coastline <- read_sf("GIS/BordersandProtectedAreas/mar_coastline.shp")
 aoi_32 <- st_transform(aoi, crs = 32616)
+mpa_boundaries <- read_sf("~/Documents/MAR/GIS/BordersandProtectedAreas/MPA/MPA_Updates_July_2020/MPA_Network_WGS8416N_v3.shp")
 
 clim1 <- read_sf("Scenarios/Climate/MARwide_climate_noact_rec_clim1.geojson")
 clim1
@@ -30,6 +31,7 @@ ggplot(clim1) +
                        direction = 1) +
   geom_sf(data = aoi_32, fill = NA) +
   geom_sf(data = coastline, size = .3, col = "gray25") +
+  geom_sf(data = mpa_boundaries, fill = NA, col = "black", lwd = .3) +
   coord_sf(xlim = c(260000, 670000),
            ylim = c(1705000, 2420000)) +
   labs(title = "Baseline") +
@@ -40,8 +42,8 @@ ggplot(clim1) +
         legend.position = c(.85, .425),
         plot.title = element_text(hjust = .5, size = 15))
 
-#ggsave(paste0("Deliverables/figs/MAR_2017_estimated_vis_", dddd, ".png"), width = 6, height = 6.4, units = "in")
-#plot_crop(paste0("Deliverables/figs/MAR_2017_estimated_vis_", dddd, ".png"))
+ggsave(paste0("Deliverables/figs/MAR_2017_estimated_vis_", dddd, ".png"), width = 6, height = 6.4, units = "in")
+plot_crop(paste0("Deliverables/figs/MAR_2017_estimated_vis_", dddd, ".png"))
 
 ### What I do want, is maps of % change
 
@@ -56,7 +58,8 @@ ggplot(clim1) +
                        breaks = c(-100, -50, 0, 50, 100, 150, 200, 250),
                        labels = percent_format(scale = 1, accuracy = 1)) +
   geom_sf(data = aoi_32, fill = NA) +
-  geom_sf(data = coastline) +
+  geom_sf(data = coastline, size = .3, col = "gray25") +
+  geom_sf(data = mpa_boundaries, fill = NA, col = "black", lwd = .5) +
   coord_sf(xlim = c(260000, 670000),
            ylim = c(1705000, 2420000)) +
   labs(title = "RCP 8.5 2050s (25th Percentile)") +
@@ -67,8 +70,8 @@ ggplot(clim1) +
     legend.position = c(.82, .425),
     plot.title = element_text(hjust = .5, size = 15))
 
-#ggsave(paste0("Deliverables/figs/futureVis/perc_change_map_clim1_", dddd, ".png"), width = 6, height = 6.4, units = "in")
-#plot_crop(paste0("Deliverables/figs/futureVis/perc_change_map_clim1_", dddd, ".png"))
+ggsave(paste0("Deliverables/figs/futureVis/perc_change_map_clim1_", dddd, ".png"), width = 6, height = 6.4, units = "in")
+plot_crop(paste0("Deliverables/figs/futureVis/perc_change_map_clim1_", dddd, ".png"))
 
 ggplot(clim2) +
   geom_sf(aes(fill = perc_change), size = .01) +
@@ -81,7 +84,8 @@ ggplot(clim2) +
                        breaks = c(-100, -50, 0, 50, 100, 150, 200, 250),
                        labels = percent_format(scale = 1, accuracy = 1)) +
   geom_sf(data = aoi_32, fill = NA) +
-  geom_sf(data = coastline) +
+  geom_sf(data = coastline, size = .3, col = "gray25") +
+  geom_sf(data = mpa_boundaries, fill = NA, col = "black", lwd = .5) +
   coord_sf(xlim = c(260000, 670000),
            ylim = c(1705000, 2420000)) +
   labs(title = "RCP 8.5 2050s (75th Percentile)") +
@@ -92,8 +96,8 @@ ggplot(clim2) +
     legend.position = c(.82, .425),
     plot.title = element_text(hjust = .5, size = 15))
 
-#ggsave(paste0("Deliverables/figs/futureVis/perc_change_map_clim2_", dddd, ".png"), width = 6, height = 6.4, units = "in")
-#plot_crop(paste0("Deliverables/figs/futureVis/perc_change_map_clim2_", dddd, ".png"))
+ggsave(paste0("Deliverables/figs/futureVis/perc_change_map_clim2_", dddd, ".png"), width = 6, height = 6.4, units = "in")
+plot_crop(paste0("Deliverables/figs/futureVis/perc_change_map_clim2_", dddd, ".png"))
 
 
 summary(clim1$perc_change)
@@ -129,7 +133,9 @@ ggplot(clim1) +
                        #labels = percent_format(scale = 1, accuracy = 1)
                        ) +
   geom_sf(data = aoi_32, fill = NA) +
-  geom_sf(data = coastline, size = .2, col = "gray50") +
+  #geom_sf(data = coastline, size = .2, col = "gray50") +
+  geom_sf(data = coastline, size = .3, col = "gray50") +
+  geom_sf(data = mpa_boundaries, fill = NA, col = "black", lwd = .5) +
   coord_sf(xlim = c(260000, 670000),
            ylim = c(1705000, 2420000)) +
   labs(title = "RCP 8.5 2050s (25th Percentile)") +
@@ -157,7 +163,8 @@ ggplot(clim2) +
                        #labels = percent_format(scale = 1, accuracy = 1)
   ) +
   geom_sf(data = aoi_32, fill = NA) +
-  geom_sf(data = coastline, size = .2, col = "gray50") +
+  geom_sf(data = coastline, size = .3, col = "gray50") +
+  geom_sf(data = mpa_boundaries, fill = NA, col = "black", lwd = .5) +
   coord_sf(xlim = c(260000, 670000),
            ylim = c(1705000, 2420000)) +
   labs(title = "RCP 8.5 2050s (75th Percentile)") +
@@ -331,7 +338,6 @@ for(country in countries){
 
 #### country level maps
 # it would be good to make country level maps
-mpa_boundaries <- read_sf("~/Documents/MAR/GIS/BordersandProtectedAreas/MPA/MPA_Updates_July_2020/MPA_Network_WGS8416N_v3.shp")
 
 # Mexico clim1
 ggplot(clim1 %>% filter(CNTRY_NAME == "Mexico")) +
@@ -380,7 +386,7 @@ ggplot(clim2 %>% filter(CNTRY_NAME == "Mexico")) +
   coord_sf(xlim = c(-89.0, -86.2), ylim = c(20.8, 22.25), crs = 4326) +
   labs(title = "RCP 8.5 2050s (75th Percentile)") +
   theme_void() +
-  theme(#panel.border = element_rect(colour = "black", fill=NA, size=.5),
+  theme(panel.border = element_rect(colour = "black", fill=NA, size=.5),
     legend.background = element_rect(fill = "white"),
     legend.margin = margin(3, 3, 3, 3),
     #legend.position = c(.82, .425),
@@ -409,7 +415,7 @@ ggplot(clim1 %>% filter(CNTRY_NAME == "Mexico")) +
   coord_sf(xlim = c(-89.0, -86.2), ylim = c(20.8, 22.25), crs = 4326) +
   labs(title = "RCP 8.5 2050s (25th Percentile)") +
   theme_void() +
-  theme(#panel.border = element_rect(colour = "black", fill=NA, size=.5),
+  theme(panel.border = element_rect(colour = "black", fill=NA, size=.5),
     legend.background = element_rect(fill = "white"),
     legend.margin = margin(3, 3, 3, 3),
     #legend.position = c(.82, .425),
@@ -438,7 +444,7 @@ ggplot(clim2 %>% filter(CNTRY_NAME == "Belize")) +
   coord_sf(xlim = c(-89.5, -87), ylim = c(15.75, 18.5), crs = 4326) +
   labs(title = "RCP 8.5 2050s (75th Percentile)") +
   theme_void() +
-  theme(#panel.border = element_rect(colour = "black", fill=NA, size=.5),
+  theme(panel.border = element_rect(colour = "black", fill=NA, size=.5),
     legend.background = element_rect(fill = "white"),
     legend.margin = margin(3, 3, 3, 3),
     #legend.position = c(.82, .425),
@@ -468,7 +474,7 @@ ggplot(clim1 %>% filter(CNTRY_NAME == "Belize")) +
   coord_sf(xlim = c(-89.5, -87), ylim = c(15.75, 18.5), crs = 4326) +
   labs(title = "RCP 8.5 2050s (25th Percentile)") +
   theme_void() +
-  theme(#panel.border = element_rect(colour = "black", fill=NA, size=.5),
+  theme(panel.border = element_rect(colour = "black", fill=NA, size=.5),
     legend.background = element_rect(fill = "white"),
     legend.margin = margin(3, 3, 3, 3),
     #legend.position = c(.82, .425),
@@ -498,7 +504,7 @@ ggplot(clim2 %>% filter(CNTRY_NAME == "Guatemala")) +
   coord_sf(xlim = c(-89.5, -88.2), ylim = c(15.25, 16.2), crs = 4326) +
   labs(title = "RCP 8.5 2050s (75th Percentile)") +
   theme_void() +
-  theme(#panel.border = element_rect(colour = "black", fill=NA, size=.5),
+  theme(panel.border = element_rect(colour = "black", fill=NA, size=.5),
     legend.background = element_rect(fill = "white"),
     legend.margin = margin(3, 3, 3, 3),
     #legend.position = c(.82, .425),
@@ -527,7 +533,7 @@ ggplot(clim1 %>% filter(CNTRY_NAME == "Guatemala")) +
   coord_sf(xlim = c(-89.5, -88.2), ylim = c(15.25, 16.2), crs = 4326) +
   labs(title = "RCP 8.5 2050s (25th Percentile)") +
   theme_void() +
-  theme(#panel.border = element_rect(colour = "black", fill=NA, size=.5),
+  theme(panel.border = element_rect(colour = "black", fill=NA, size=.5),
     legend.background = element_rect(fill = "white"),
     legend.margin = margin(3, 3, 3, 3),
     #legend.position = c(.82, .425),
@@ -558,7 +564,7 @@ ggplot(clim2 %>% filter(CNTRY_NAME == "Honduras")) +
   coord_sf(xlim = c(-88.6, -85.65), ylim = c(15.25, 16.75), crs = 4326) +
   labs(title = "RCP 8.5 2050s (75th Percentile)") +
   theme_void() +
-  theme(#panel.border = element_rect(colour = "black", fill=NA, size=.5),
+  theme(panel.border = element_rect(colour = "black", fill=NA, size=.5),
     legend.background = element_rect(fill = "white"),
     legend.margin = margin(3, 3, 3, 3),
     #legend.position = c(.82, .425),
@@ -587,7 +593,7 @@ ggplot(clim1 %>% filter(CNTRY_NAME == "Honduras")) +
   coord_sf(xlim = c(-88.6, -85.65), ylim = c(15.25, 16.75), crs = 4326) +
   labs(title = "RCP 8.5 2050s (25th Percentile)") +
   theme_void() +
-  theme(#panel.border = element_rect(colour = "black", fill=NA, size=.5),
+  theme(panel.border = element_rect(colour = "black", fill=NA, size=.5),
     legend.background = element_rect(fill = "white"),
     legend.margin = margin(3, 3, 3, 3),
     #legend.position = c(.82, .425),
