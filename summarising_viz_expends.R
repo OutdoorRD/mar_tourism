@@ -1,11 +1,19 @@
 #######
 ###  Summarising Visitation and Expenditures by MAR, country, and MPA
+### 
 ###
 ###  Requires: 
 ###     Total visitors to the AOI in each country to be distributed out based on PUD and TUD
 ###         (proportioned_viz_2015.csv from downscaling.r)
 ###     Outputs from preparing_socmed.R
 ###     Table of "short" MPA names
+###
+### Creates:
+###     aoi_viz_exp.shp
+###     country_summary.csv
+###     mar_summary.csv
+###     mpa_summary.csv
+###     plots of mpa estimates by country
 
 library(sf)
 library(tidyverse)
@@ -127,6 +135,15 @@ mpa_summaries
 # write it out
 #write_csv(mpa_summaries, "viz_and_expends/mpa_summaries.csv")
 
+# let's write out a cleaner version too, which only includes the smud_prop
+mpa_summaries_clean <- mpa_summaries %>%
+  st_drop_geometry() %>%
+  filter(socmed == "smud_prop") %>%
+  select(-prop, -socmed) %>%
+  mutate(visitors = round(visitors))
+mpa_summaries_clean
+#write_csv(mpa_summaries_clean, "viz_and_expends/mpa_summaries_clean.csv")
+
 ##### Let's pull in whatever empirical numbers I have for MPA visitors and see how my estimates compare
 MPA_emp_viz <- read_csv("~/Documents/MAR/Data/MPA_Emp_Visitation_10_09_19.csv")
 # I have multiple estimates/years for Hol Chan and Cayos Cochinos and South Water Caye. Let's drop some
@@ -185,7 +202,8 @@ mpa_comps %>%
 
 
 ############ Plotting MPA Summaries #########
-countrytp <- "Guatemala"
+### Note that I checked on 6/21/21 that this creates the same results as reading in aoi_viz_exp.R directly and summarising by MPA
+countrytp <- "Honduras"
 ggplot(mpa_summaries %>% filter(Country == countrytp, socmed == "smud_prop")) +
   geom_col(aes(x = reorder(MPA_short, visitors), y = visitors), fill = "darkred", width = .7) +
   coord_flip() +

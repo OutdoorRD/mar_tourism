@@ -166,10 +166,10 @@ ggplot() +
   #scale_fill_gradient(breaks = c(10, 100, 1000, 10000, 100000, 500000),
   #                     labels = c("1-10", "10-100", "100-1,000", "1,000-10,000", "10,000 - 100,000", "100,000+")) +
   geom_sf(data = mpas %>% filter(Country == "Belize"), fill = NA, col = "black", lwd = .5) +
-  geom_text(data = mpa_pts %>% filter(Country == "Belize", 
+  geom_spatial_text(data = mpa_pts %>% filter(Country == "Belize", 
                                       !Name_short %in% c("Bacalar Chico", "Laughing Bird Caye",
                                                          "Sapodilla Cayes")), 
-            aes(x =X-.5, y=Y, label = Name_short)) +
+            aes(x =X-47000, y=Y, label = Name_short), crs = 32616) +
   geom_text(aes(x = c(-87.45, -87.75, -87.8), 
                 y = c(18.15, 16.4, 16.15), 
                 label = c("Bacalar Chico", "Laughing Bird Caye", "Sapodilla Cayes"))) +
