@@ -90,6 +90,8 @@ modeled_sp <- aoi %>%
   dplyr::select(pid, CNTRY_NAME) %>%
   left_join(modeled, by = "pid")
 
+modeled_sp
+
 ggplot(modeled_sp)+# %>% filter(diff_vis != 0)) +
   geom_sf(aes(fill = diff_vis), size = .1)
 
@@ -97,4 +99,10 @@ ggplot(modeled_sp)+# %>% filter(diff_vis != 0)) +
   geom_sf(aes(fill = perc_change), size = .1)
 
 # write this out (for the whole MAR region)
-st_write(modeled_sp, paste0("Scenarios/Climate/MARwide_", ipm, "_", aname, "_rec_", climate, ".geojson"), delete_dsn = TRUE)
+#st_write(modeled_sp, paste0("Scenarios/Climate/MARwide_", ipm, "_", aname, "_rec_", climate, ".geojson"), delete_dsn = TRUE)
+
+# Make a simpler version to write out to share with partners
+modeled_simple <- modeled_sp %>%
+  select(pid, CNTRY_NAME, diff_vis, perc_change)
+
+st_write(modeled_simple, paste0("Scenarios/Climate/MARwide_visitation_change_", climate, ".shp"), delete_layer = TRUE)

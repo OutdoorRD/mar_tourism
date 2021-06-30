@@ -71,9 +71,12 @@ aoi_smud <- avg_ann_ud %>% left_join(aoi, by = "pid")
 aoi_smud_gt_0 <- aoi_smud %>% filter(smud_prop > 0)
 #write_sf(aoi_smud_gt_0, "aoi_smud_gt_0.shp")
 
+# make a version without avg_ann_smud to include in final deliverables, since I didn't use that column in the end
+# also name it more helpfully
+aoi_social_media <- aoi_smud %>%
+  select(-avg_ann_smud, -area)
 
-
-
+write_sf(aoi_social_media, "aoi_social_media.shp")
 
 ################################################################
 ## Old code looking at avg_ann_smud. As of 10/9/19, preference is to use smud_prop
