@@ -3,11 +3,15 @@
 ### Calculates the effect of implementing watershed strategies in optimal places, both with and without the r2r effects, for jade's paper
 ### Updated 1/4/22
 ### Forked from viz_predict_s1_s2_restore_protect_forest.R on 1/4/22
-### NOTE: The coastal forest "baseline" is being modified in this script. The actual baseline LUC that I used to fit the model
-### was updated  to clip out the offshore LUC values. But, it happened too late for me to incorporate it throughout 
+###
+### NOTE: BOTH The coastal forest "baseline" and the healthy coral "baseline" are being modified in this 
+### script. The actual baseline LUC that I used to fit the model
+### was updated  to clip out the offshore LUC values, while the coral baseline was updated to remove 
+### nonexistent coral around BZ city. But, both happened too late for me to incorporate it throughout 
 ### (as well as only happening for BZ, HN, and GT, not MX). So... instead, this script:
 ###    - Reads in the true baseline
 ###    - Modifies the forest_prop values according to T_AOI_mar_s0_forest.geojson
+###    - And Modifies the coral_prop values acccording to T_AOI_r2r_baseline_coral.geojson
 ###    - Uses that as the new "baseline" for these scenarios
 ###    - Compares it's predictions to those from the scenario baseline layer
 
@@ -44,9 +48,9 @@ climshort <- "c0"
 ipm <- paste0("ipm_", anum)
 
 if(anum == "s1_n_r2r"){
-  newNonClimate <- read_csv("mar_tourism/Data/Scenarios/s1_n_r2r_without_watershed_weighting_NonClimatePredictors_20220104.csv")
+  newNonClimate <- read_csv("mar_tourism/Data/Scenarios/s1_n_r2r_without_watershed_weighting_NonClimatePredictors_20220105.csv")
 }else{
-  newNonClimate <- read_csv("mar_tourism/Data/Scenarios/s2_w_r2r_with_watershed_weighting_NonClimatePredictors_20220104.csv")  
+  newNonClimate <- read_csv("mar_tourism/Data/Scenarios/s2_w_r2r_with_watershed_weighting_NonClimatePredictors_20220105.csv")  
 }
 
 
@@ -61,6 +65,14 @@ forest_s0_pid <- forest_alt_s0 %>%
          forest_prop = if_else(forest_prop > 1, 1, forest_prop)) %>%
   dplyr::select(pid, forest_prop)
 
+## Reading in alternative s0 coral values & processing
+coral_alt_s0 <- read_sf("R2R_Paper/Scenarios/BaselineCoral/T_AOI_r2r_baseline_coral.geojson")
+coral_s0_pid <- coral_alt_s0 %>% 
+  st_set_geometry(NULL) %>%
+  mutate(coral_prop = if_else(is.na(c0_sum), 0, c0_sum / (area*multiplier))) %>%
+  dplyr::select(pid, coral_prop)
+
+
 clim_post <- case_when(climate == "clim0" ~ "0",
                        climate == "clim1" ~ "25",
                        climate == "clim2" ~ "75")
@@ -74,10 +86,11 @@ modeled <- baselines %>%
   dplyr::select(pid, vis_log, est_vis) %>%
   arrange(pid)
 
-#### Joining climate onto baselines & REPLACING FOREST VALUES!
+#### Joining climate onto baselines & REPLACING FOREST & CORAL VALUES!
 base_climate_all <- baselines %>%
-  dplyr::select(-forest_prop) %>%
+  dplyr::select(-forest_prop, -coral_prop) %>%
   left_join(forest_s0_pid, by = "pid") %>%
+  left_join(coral_s0_pid, by = "pid") %>%
   left_join(climate_vals, by = "pid")
 
 ### Create tibble of baseline values in new climate
@@ -153,22 +166,31 @@ modeled_sp <- aoi %>%
   dplyr::select(pid, CNTRY_NAME) %>%
   left_join(modeled, by = "pid")
 
-ggplot(modeled_sp %>% filter(diff_vis != 0)) +
+## Drop MX since it's not included in the AOI and is returning some misleading results
+modeled_sp_3 <- modeled_sp %>%
+  filter(CNTRY_NAME != "Mexico")
+
+ggplot(modeled_sp_3 %>% filter(diff_vis != 0)) +
   geom_sf(aes(fill = diff_vis), size = .1)
 
-summary(modeled_sp$diff_vis)
-# why do I have negatives?
+summary(modeled_sp_3$diff_vis)
+# why do I have negatives? - dropping MX mostly dealt with them, but still a bit
 
 
-ggplot(modeled_sp %>% filter(diff_vis != 0)) +
+ggplot(modeled_sp_3 %>% filter(diff_vis != 0)) +
   geom_sf(aes(fill = perc_change), size = .1)
 
-modeled_sp %>%
+modeled_sp_3 %>%
   filter(diff_vis != 0) %>%
   arrange(desc(perc_change))
 
-summary(modeled_sp)
+summary(modeled_sp_3)
+
+## simpler version to share
+modeled_sp_tw <- modeled_sp_3 %>%
+  dplyr::select(pid, CNTRY_NAME, diff_vis, perc_change)
 
 
-# let's write it out
-st_write(modeled_sp, paste0("R2R_Paper/Scenarios/", anum, "_", aname, "/IPMs/MARwide_", ipm, "_", aname, "_rec_", climate, ".geojson"))#, delete_dsn = TRUE)
+# let's write it out (full file as a geojson, plus a simpler one as a shapefile for jade)
+st_write(modeled_sp_3, paste0("R2R_Paper/Scenarios/", anum, "_", aname, "/IPMs/MARwide_", ipm, "_", aname, "_rec_", climate, ".geojson"))#, delete_dsn = TRUE)
+st_write(modeled_sp_tw, paste0("R2R_Paper/Scenarios/", anum, "_", aname, "/IPMs/MARwide_", ipm, "_", aname, "_rec_", climate, ".shp"))#, delete_dsn = TRUE)
