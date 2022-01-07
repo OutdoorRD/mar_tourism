@@ -56,7 +56,7 @@ if(anum == "s1_n_r2r"){
 
 ## Reading in alternative s0 forest values, and doing some processing on them
 ## This part forked from `prepping_non_climate_predictors`
-forest_alt_s0 <- read_sf("ROOT/01_02_forest_scenario_baseline/T_AOI_mar_s0_forest.geojson")
+forest_alt_s0 <- read_sf("R2R_Paper/Scenarios/BaselineForest/T_AOI_r2r_baseline_forest.geojson")
 multiplier <- pull(read.csv("mar_tourism/Data/areaTo30mCellMultiplier.csv"))
 
 forest_s0_pid <- forest_alt_s0 %>%
@@ -174,7 +174,8 @@ ggplot(modeled_sp_3 %>% filter(diff_vis != 0)) +
   geom_sf(aes(fill = diff_vis), size = .1)
 
 summary(modeled_sp_3$diff_vis)
-# why do I have negatives? - dropping MX mostly dealt with them, but still a bit
+# ok good, using the updated baseline luc basically took care of my negatives. still a -.03, 
+# but i think we can ignore that 
 
 
 ggplot(modeled_sp_3 %>% filter(diff_vis != 0)) +
@@ -192,5 +193,5 @@ modeled_sp_tw <- modeled_sp_3 %>%
 
 
 # let's write it out (full file as a geojson, plus a simpler one as a shapefile for jade)
-st_write(modeled_sp_3, paste0("R2R_Paper/Scenarios/", anum, "_", aname, "/IPMs/MARwide_", ipm, "_", aname, "_rec_", climate, ".geojson"))#, delete_dsn = TRUE)
-st_write(modeled_sp_tw, paste0("R2R_Paper/Scenarios/", anum, "_", aname, "/IPMs/MARwide_", ipm, "_", aname, "_rec_", climate, ".shp"))#, delete_dsn = TRUE)
+st_write(modeled_sp_3, paste0("R2R_Paper/Scenarios/", anum, "_", aname, "/IPMs/MARwide_", ipm, "_", aname, "_rec_", climate, ".geojson"), delete_dsn = TRUE)
+st_write(modeled_sp_tw, paste0("R2R_Paper/Scenarios/", anum, "_", aname, "/IPMs/MARwide_", ipm, "_", aname, "_rec_", climate, ".shp"), delete_dsn = TRUE)
