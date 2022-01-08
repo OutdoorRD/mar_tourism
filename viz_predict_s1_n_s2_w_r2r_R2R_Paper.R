@@ -40,8 +40,8 @@ aoi <- read_sf("ModelRuns/baseline_20200715/T_AOI_v4_5k_32616_pid.shp")
 ## Getting oriented in naming scheme
 
 # Protect forest is relevant for BZ, GT, and HN
-anum <- "s1_n_r2r" # s1_n_r2r = without_watershed_weighting, s2_w_r2r = with_watershed_weighting
-aname <- "without_watershed_weighting"
+anum <- "s2_w_r2r" # s1_n_r2r = without_watershed_weighting, s2_w_r2r = with_watershed_weighting
+aname <- "with_watershed_weighting"
 climate <- "clim0" #Baseline climate = clim0; 25th perc = clim1; 75th perc = clim2
 climshort <- "c0"
 
@@ -119,13 +119,13 @@ modeled$preds_base_clim_vis <- exp(preds_base_clim) # Note: I'm doing exp and no
 modeled
 
 
-### Below is modified to calculate forest and coral effects separately
-# Create tibble of FOREST SCENARIO data in new climate
 scen_climate_all <- newNonClimate %>%
   left_join(climate_vals, by = "pid")
 scen_climate_all
 base_climate_all
 
+### Below is modified to calculate forest and coral effects separately
+# Create tibble of FOREST SCENARIO data in new climate
 # looking for forest effect, so replacing CORAL data in the scenario df with coral data from the baseline df
 scen_climate_forest_eff <- scen_climate_all %>%
   dplyr::select(-coral_prop) %>%
@@ -227,10 +227,6 @@ ggplot(modeled_sp_3 %>% filter(diff_vis_forest != 0)) +
 ggplot(modeled_sp_3 %>% filter(diff_vis_coral != 0)) +
   geom_sf(aes(fill = perc_change_coral), size = .1)
 
-modeled_sp_3 %>%
-  filter(diff_vis != 0) %>%
-  arrange(desc(perc_change))
-
 summary(modeled_sp_3)
 
 ## simpler version to share
@@ -240,4 +236,4 @@ modeled_sp_tw <- modeled_sp_3 %>%
 
 # let's write it out (full file as a geojson, plus a simpler one as a shapefile for jade)
 st_write(modeled_sp_3, paste0("R2R_Paper/Scenarios/", anum, "_", aname, "/IPMs/MARwide_", ipm, "_", aname, "_rec_", climate, "_sep.geojson"), delete_dsn = TRUE)
-st_write(modeled_sp_tw, paste0("R2R_Paper/Scenarios/", anum, "_", aname, "/IPMs/MARwide_", ipm, "_", aname, "_rec_", climate, "_sep.shp"), delete_dsn = TRUE)
+st_write(modeled_sp_tw, paste0("R2R_Paper/Scenarios/", anum, "_", aname, "/IPMs/MARwide_", ipm, "_", aname, "_rec_", climate, "_sep.shp"))#, delete_dsn = TRUE)
