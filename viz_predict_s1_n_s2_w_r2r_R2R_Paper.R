@@ -233,6 +233,11 @@ summary(modeled_sp_3)
 modeled_sp_tw <- modeled_sp_3 %>%
   dplyr::select(pid, CNTRY_NAME, fors_vis = diff_vis_forest, cor_vis = diff_vis_coral)
 
+# total change?
+modeled_sp_tw %>%
+  st_drop_geometry() %>%
+  summarise(change_fors = sum(fors_vis, na.rm = T),
+            change_cor = sum(cor_vis, na.rm = T))
 
 # let's write it out (full file as a geojson, plus a simpler one as a shapefile for jade)
 st_write(modeled_sp_3, paste0("R2R_Paper/Scenarios/", anum, "_", aname, "/IPMs/MARwide_", ipm, "_", aname, "_rec_", climate, "_sep.geojson"), delete_dsn = TRUE)
