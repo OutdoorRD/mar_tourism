@@ -1,7 +1,7 @@
 #####
 ### R2R paper viz_predict script
 ### Calculates the effect of implementing watershed strategies in optimal places, both with and without the r2r effects, for jade's paper
-### Updated 1/4/22
+### Updated 1/7/22 to read in new forest baseline, and to calculate effects of coral and forest change separately
 ### Forked from viz_predict_s1_s2_restore_protect_forest.R on 1/4/22
 ###
 ### NOTE: BOTH The coastal forest "baseline" and the healthy coral "baseline" are being modified in this 
@@ -119,13 +119,19 @@ modeled$preds_base_clim_vis <- exp(preds_base_clim) # Note: I'm doing exp and no
 modeled
 
 
-# Create tibble of SCENARIO data in new climate
+### Below is modified to calculate forest and coral effects separately
+# Create tibble of FOREST SCENARIO data in new climate
 scen_climate_all <- newNonClimate %>%
   left_join(climate_vals, by = "pid")
 scen_climate_all
 base_climate_all
 
-scen_clim_data <- scen_climate_all %>%
+# looking for forest effect, so replacing CORAL data in the scenario df with coral data from the baseline df
+scen_climate_forest_eff <- scen_climate_all %>%
+  dplyr::select(-coral_prop) %>%
+  left_join(coral_s0_pid, by = "pid")
+  
+scen_clim_data_forest <- scen_climate_forest_eff %>%
   dplyr::select(pid,
                 country, 
                 coral_prop = paste0("coral_prop", clim_post_c), 
@@ -143,22 +149,55 @@ scen_clim_data <- scen_climate_all %>%
                 cellarea) %>%
   arrange(pid)
 
-preds_scen_clim <- predict(viz_model_raw, newdata = scen_clim_data)
-modeled$preds_scen_clim <- preds_scen_clim
-modeled$preds_scen_clim_vis <- exp(preds_scen_clim)
+preds_scen_clim_forest <- predict(viz_model_raw, newdata = scen_clim_data_forest)
+modeled$preds_scen_clim_forest <- preds_scen_clim_forest
+modeled$preds_scen_clim_vis_forest <- exp(preds_scen_clim_forest)
 modeled
+
+
+### Now do the same to get the CORAL effect, by replacing FOREST with baseline values
+scen_climate_coral_eff <- scen_climate_all %>%
+  dplyr::select(-forest_prop) %>%
+  left_join(forest_s0_pid, by = "pid")
+
+scen_clim_data_coral <- scen_climate_coral_eff %>%
+  dplyr::select(pid,
+                country, 
+                coral_prop = paste0("coral_prop", clim_post_c), 
+                mangrove_prop, 
+                beach,
+                forest_prop, 
+                temp = paste0("temp", clim_post), 
+                hotdays = paste0("hotdays", clim_post), 
+                precip = paste0("precip", clim_post), 
+                wildlife,
+                pa_min_dist, 
+                ruins, 
+                develop, 
+                roads,
+                cellarea) %>%
+  arrange(pid)
+
+preds_scen_clim_coral <- predict(viz_model_raw, newdata = scen_clim_data_coral)
+modeled$preds_scen_clim_coral <- preds_scen_clim_coral
+modeled$preds_scen_clim_vis_coral <- exp(preds_scen_clim_coral)
+modeled
+
 
 # Apply future vis multiplier of 2.67
 modeled$preds_base_clim_vis_future <- modeled$preds_base_clim_vis * 2.67
-modeled$preds_scen_clim_vis_future <- modeled$preds_scen_clim_vis * 2.67
+modeled$preds_scen_clim_vis_future_forest <- modeled$preds_scen_clim_vis_forest * 2.67
+modeled$preds_scen_clim_vis_future_coral <- modeled$preds_scen_clim_vis_coral * 2.67
 modeled
 
 
 
 # calculate difference
 modeled <- modeled %>%
-  mutate(diff_vis = round(preds_scen_clim_vis_future - preds_base_clim_vis_future, 2), # Varies by adaptation strategy, but both Protect and rEstore forest are scenario - baseline
-         perc_change = 100*(preds_scen_clim_vis_future - preds_base_clim_vis_future) / preds_base_clim_vis_future) 
+  mutate(diff_vis_forest = round(preds_scen_clim_vis_future_forest - preds_base_clim_vis_future, 2), # Varies by adaptation strategy, but both Protect and rEstore forest are scenario - baseline
+         perc_change_forest = 100*(preds_scen_clim_vis_future_forest - preds_base_clim_vis_future) / preds_base_clim_vis_future,
+         diff_vis_coral = round(preds_scen_clim_vis_future_coral - preds_base_clim_vis_future, 2), 
+         perc_change_coral = 100*(preds_scen_clim_vis_future_coral - preds_base_clim_vis_future) / preds_base_clim_vis_future) 
 modeled
 
 # join to spatial 
@@ -170,16 +209,23 @@ modeled_sp <- aoi %>%
 modeled_sp_3 <- modeled_sp %>%
   filter(CNTRY_NAME != "Mexico")
 
-ggplot(modeled_sp_3 %>% filter(diff_vis != 0)) +
-  geom_sf(aes(fill = diff_vis), size = .1)
+ggplot(modeled_sp_3 %>% filter(diff_vis_forest != 0)) +
+  geom_sf(aes(fill = diff_vis_forest), size = .1)
 
-summary(modeled_sp_3$diff_vis)
+ggplot(modeled_sp_3 %>% filter(diff_vis_coral != 0)) +
+  geom_sf(aes(fill = diff_vis_coral), size = .1)
+
+summary(modeled_sp_3$diff_vis_forest)
+summary(modeled_sp_3$diff_vis_coral)
 # ok good, using the updated baseline luc basically took care of my negatives. still a -.03, 
 # but i think we can ignore that 
 
 
-ggplot(modeled_sp_3 %>% filter(diff_vis != 0)) +
-  geom_sf(aes(fill = perc_change), size = .1)
+ggplot(modeled_sp_3 %>% filter(diff_vis_forest != 0)) +
+  geom_sf(aes(fill = perc_change_forest), size = .1)
+
+ggplot(modeled_sp_3 %>% filter(diff_vis_coral != 0)) +
+  geom_sf(aes(fill = perc_change_coral), size = .1)
 
 modeled_sp_3 %>%
   filter(diff_vis != 0) %>%
@@ -189,9 +235,9 @@ summary(modeled_sp_3)
 
 ## simpler version to share
 modeled_sp_tw <- modeled_sp_3 %>%
-  dplyr::select(pid, CNTRY_NAME, diff_vis, perc_change)
+  dplyr::select(pid, CNTRY_NAME, fors_vis = diff_vis_forest, cor_vis = diff_vis_coral)
 
 
 # let's write it out (full file as a geojson, plus a simpler one as a shapefile for jade)
-st_write(modeled_sp_3, paste0("R2R_Paper/Scenarios/", anum, "_", aname, "/IPMs/MARwide_", ipm, "_", aname, "_rec_", climate, ".geojson"), delete_dsn = TRUE)
-st_write(modeled_sp_tw, paste0("R2R_Paper/Scenarios/", anum, "_", aname, "/IPMs/MARwide_", ipm, "_", aname, "_rec_", climate, ".shp"), delete_dsn = TRUE)
+st_write(modeled_sp_3, paste0("R2R_Paper/Scenarios/", anum, "_", aname, "/IPMs/MARwide_", ipm, "_", aname, "_rec_", climate, "_sep.geojson"), delete_dsn = TRUE)
+st_write(modeled_sp_tw, paste0("R2R_Paper/Scenarios/", anum, "_", aname, "/IPMs/MARwide_", ipm, "_", aname, "_rec_", climate, "_sep.shp"), delete_dsn = TRUE)
