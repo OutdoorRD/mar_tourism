@@ -1,18 +1,16 @@
 #####
 ### Forked from viz_predict_erase_footrpint on 2/23/21
 ### This script is for predicting changes in vis due to R2R coral changes!
+### Updated 8/11/22 to recreate effect of s1, s2, and s3 coral changes on 
+### tourism, after Jade discovered an updated and much improved coral baseline 
+### layer. 
 ###
-### Using the Viz Model to predict Viz under different scenarios
-### This script is optimized for "protect" scenarios that simply remove the entire 
-###  footprint of the habitat (mangroves, coral, others?).
-### IS NOT APPROPRIATE for protect forest, which doesn't simply remove the entire footprint
-
-## Code has been used to create the mangrove scnearios, and should be ready for protect coral
-
-### Forked from viz_predict.R on 7/27/20
-### Updated 12/22/20 to create Protect Coral and Protect Mangrove scenarios
-
-### Updated 2/19/21 to recreate Protect Mangrove scenarios
+### NOTE: The healthy coral "baseline" is being modified in this 
+### script to use the newly discovered layer. So, this script:
+###    - Reads in the true baseline
+###    - And Modifies the coral_prop values acccording to T_AOI_r2r_baseline_coral.geojson
+###    - Uses that as the new "baseline" for these scenarios
+###    - Compares it's predictions to those from the scenario baseline layer
 
 library(tidyverse)
 library(sf)
@@ -38,7 +36,7 @@ aoi <- read_sf("ModelRuns/baseline_20200715/T_AOI_v4_5k_32616_pid.shp")
 
 ## Getting oriented in naming scheme
 
-anumcor <- "s4" # these are equivalent to the anums, but with "s" and just used for the r2r scenarios
+anumcor <- "s1" # these are equivalent to the anums, but with "s" and just used for the r2r scenarios
 climate <- "clim0" #Baseline climate = clim0; 25th perc = clim1; 75th perc = clim2
 climshort <- "c0"
 #
@@ -46,17 +44,26 @@ climshort <- "c0"
 
 ## reading in alternative coral data (and doing minor processing on it to make it useable)
 # This piece comes from preparing_non_climate_predictors code
-newcoral <- read_sf("ROOT/R2R_Scenarios/T_AOI_R2R_clim0.geojson")
+newcoral <- read_sf("ROOT/R2R_Scenarios/Re_Analysis_2022_Aug/T_AOI_R2R_clim0.geojson")
 multiplier <- pull(read.csv("mar_tourism/Data/areaTo30mCellMultiplier.csv"))
+
+
+## Reading in alternative s0 coral values & processing
+coral_alt_s0 <- read_sf("R2R_Paper/Scenarios/Re_Analysis_2022_Aug/BaselineCoral/T_AOI_r2r_baseline_coral.geojson")
+coral_s0_pid <- coral_alt_s0 %>% 
+  st_set_geometry(NULL) %>%
+  mutate(coral_prop = if_else(is.na(c0_sum), 0, c0_sum / (area*multiplier))) %>%
+  dplyr::select(pid, coral_prop)
 
 newcoral
 newcoral_pid <- newcoral %>% 
   st_set_geometry(NULL) %>%
-  left_join(aoi %>% select(pid, area)) %>%
+  left_join(aoi %>% dplyr::select(pid, area)) %>%
   mutate(s1_coral_prop = if_else(is.na(s1_c0sum), 0, s1_c0sum / (area*multiplier)),
          s2_coral_prop = if_else(is.na(s2_c0sum), 0, s2_c0sum / (area*multiplier)),
-         s3_coral_prop = if_else(is.na(s3_c0sum), 0, s3_c0sum / (area*multiplier)),
-         s4_coral_prop = if_else(is.na(s4_c0sum), 0, s4_c0sum / (area*multiplier))) %>%
+         s3_coral_prop = if_else(is.na(s3_c0sum), 0, s3_c0sum / (area*multiplier))#,
+         #s4_coral_prop = if_else(is.na(s4_c0sum), 0, s4_c0sum / (area*multiplier))
+         ) %>%
   dplyr::select(pid, ends_with("coral_prop"))
 
 
@@ -77,7 +84,10 @@ modeled <- baselines %>%
 
 #### Joining climate onto baselines
 base_climate_all <- baselines %>%
+  dplyr::select(-coral_prop) %>%
+  left_join(coral_s0_pid, by = "pid") %>%
   left_join(climate_vals, by = "pid")
+base_climate_all
 
 ### Create tibble of baseline values in new climate
 base_clim_data <- base_climate_all %>%
@@ -112,8 +122,8 @@ modeled
 #scen_climate_all
 
 scen_clim_data <- base_clim_data %>%
-  select(-coral_prop) %>%
-  left_join(newcoral_pid %>% select(pid, paste0(anumcor, "_coral_prop"))) %>%
+  dplyr::select(-coral_prop) %>%
+  left_join(newcoral_pid %>% dplyr::select(pid, paste0(anumcor, "_coral_prop"))) %>%
   rename(coral_prop = paste0(anumcor, "_coral_prop"))
 
 summary(scen_clim_data)
@@ -165,10 +175,10 @@ ggplot(modeled_sp %>% filter(diff_vis != 0)) +
   geom_sf(aes(fill = perc_change), size = .1)
 
 # write this out (for the whole MAR region)
-st_write(modeled_sp, paste0("ROOT/R2R_Scenarios/IPMs/mar_r2r_", anumcor, "_rec_", climate, ".geojson"), delete_dsn = TRUE)
+st_write(modeled_sp, paste0("ROOT/R2R_Scenarios/Re_Analysis_2022_Aug/IPMs/mar_r2r_", anumcor, "_rec_", climate, ".geojson"), delete_dsn = TRUE)
 
 # do a tiny bit of clean up to write out as a cleaner shapefile for Jade
 modeled_simple <- modeled_sp %>%
-  select(pid, diff_vis, perc_change)
+  dplyr::select(pid, diff_vis, perc_change)
 
-st_write(modeled_simple, paste0("ROOT/R2R_Scenarios/IPMs/mar_r2r_", anumcor, "_rec_", climate, ".shp"), delete_layer = TRUE)
+st_write(modeled_simple, paste0("ROOT/R2R_Scenarios/Re_Analysis_2022_Aug/IPMs/mar_r2r_", anumcor, "_rec_", climate, ".shp"), delete_layer = TRUE)
