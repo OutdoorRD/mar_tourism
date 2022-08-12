@@ -36,7 +36,7 @@ aoi <- read_sf("ModelRuns/baseline_20200715/T_AOI_v4_5k_32616_pid.shp")
 
 ## Getting oriented in naming scheme
 
-anumcor <- "s1" # these are equivalent to the anums, but with "s" and just used for the r2r scenarios
+anumcor <- "s3" # these are equivalent to the anums, but with "s" and just used for the r2r scenarios
 climate <- "clim0" #Baseline climate = clim0; 25th perc = clim1; 75th perc = clim2
 climshort <- "c0"
 #
