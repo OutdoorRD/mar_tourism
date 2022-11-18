@@ -5,8 +5,8 @@ I attempted R scripts (such as in `processing_forest.R`), but found that R + my 
 
 Steps (Coastal Forest):
 1. Open a new QGIS window and load ModelRuns/baseline_20200715/T_AOI_v4_5k_32616_pid.shp
-2. Export a copy (keeping only "pid") as a geojson.
-  - Ex: For protect forest, I'm saving it as `T_AOI_protect_forest.geojson` in the MAR/ROOT/ProtectForest/ folder
+2. *(Not necessary in QGIS 3.28)* Export a copy (keeping only "pid") as a geojson.
+  - Ex: For protect forest, I'm saving it as `T_AOI_<scenario_code>_forest.geojson` in the MAR/ROOT/ProtectForest/ folder
 3. Load in the LULC layer.
   - Ex: `bz_s3_prot_fors_luc_names.tif`
 4. Create a binary coastal forest Layer
@@ -16,11 +16,13 @@ Steps (Coastal Forest):
 5. Run zonal Statistics
   - Toolbox / Raster analysis / Zonal Statistics
   - Raster layer: `*_coastal_binary`
-  - Vector layer: `T_AOI_protect_forest`
+  - Vector layer: `T_AOI_protect_forest` *(Use `T_AOI_v4_5k_32616_pid.shp` directly in QGIS 3.28)*
   - Output column prefix: `bz_` or, for MAR-wide layers: `fors_`
   - Statistics to calculate: Sum (for now)
+  - *(In QGIS 3.28)* Write out the resulting file as `T_AOI_<scenario_code>_forest.geojson`
 6. Repeat 4 & 5 with other countries (Guatemala and Honduras)
   - NOTE: Make sure to double check the results. I had some weird over-writing experiences, and ended up choosing the really basic "bz_" prefix, which seems to have fixed it (earlier I tried "bz_s3_forest_")
+
 
 Coral steps
 1. As above
@@ -31,6 +33,7 @@ Coral steps
   - Save as  `CoralScenarios/Created/bz_s3_prot_fors_clim0_cor_10.tif`
   - Equation: "s3_prot_fors_clim0_cor@1" > 10
 4. Run zonal Statistics (as above)
-  - Output column prefix: `bz_c0_`
+  - Output column prefix: `bz_c0_` or `c0_` for MAR-wide intersections
   - Statistic: Sum
+  - *(In QGIS 3.28)* Write out the resulting file as `T_AOI_<scenario_code>_coral.geojson`
   - NOTE: this will leave NULL values in some cells which don't overlap with the coral raster. This is ok - they're dealt with later in the `preparing_predictors.r` script
