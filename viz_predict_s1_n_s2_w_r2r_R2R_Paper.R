@@ -2,6 +2,8 @@
 ### R2R paper viz_predict script
 ### Calculates the effect of implementing watershed strategies in optimal places, both with and without the r2r effects, for jade's paper
 ### Updated 1/7/22 to read in new forest baseline, and to calculate effects of coral and forest change separately
+### Updated 11/18/22 to also work for the s4a and s4b scenarios - reflecting local (country-level) vs
+###   regional (MAR-level) planning priorities.
 ### Forked from viz_predict_s1_s2_restore_protect_forest.R on 1/4/22
 ###
 ### NOTE: BOTH The coastal forest "baseline" and the healthy coral "baseline" are being modified in this 
@@ -38,10 +40,10 @@ viz_model_raw <- read_rds("mar_tourism/Models/viz_model_raw.rds")
 aoi <- read_sf("ModelRuns/baseline_20200715/T_AOI_v4_5k_32616_pid.shp")
 
 ## Getting oriented in naming scheme
-
-# Protect forest is relevant for BZ, GT, and HN
-anum <- "s2_w_r2r" # s1_n_r2r = without_watershed_weighting, s2_w_r2r = with_watershed_weighting
-aname <- "with_watershed_weighting"
+# s1_n_r2r = without_watershed_weighting, s2_w_r2r = with_watershed_weighting
+# s4a = local_planning, s4b = regional_planning
+anum <- "s4a" 
+aname <- "local_planning"
 climate <- "clim0" #Baseline climate = clim0; 25th perc = clim1; 75th perc = clim2
 climshort <- "c0"
 
@@ -49,8 +51,10 @@ ipm <- paste0("ipm_", anum)
 
 if(anum == "s1_n_r2r"){
   newNonClimate <- read_csv("mar_tourism/Data/Scenarios/s1_n_r2r_without_watershed_weighting_NonClimatePredictors_20220105.csv")
-}else{
+}else if(anum == "s2_w_r2r"){
   newNonClimate <- read_csv("mar_tourism/Data/Scenarios/s2_w_r2r_with_watershed_weighting_NonClimatePredictors_20220105.csv")  
+}else if(anum == "s4a"){
+  newNonClimate <- read_csv("mar_tourism/Data/Scenarios/s4a_local_planning_NonClimatePredictors_20221118.csv")
 }
 
 
@@ -66,7 +70,7 @@ forest_s0_pid <- forest_alt_s0 %>%
   dplyr::select(pid, forest_prop)
 
 ## Reading in alternative s0 coral values & processing
-coral_alt_s0 <- read_sf("R2R_Paper/Scenarios/BaselineCoral/T_AOI_r2r_baseline_coral.geojson")
+coral_alt_s0 <- read_sf("R2R_Paper/Scenarios/Re_Analysis_2022_Aug/BaselineCoral/T_AOI_r2r_baseline_coral.geojson")
 coral_s0_pid <- coral_alt_s0 %>% 
   st_set_geometry(NULL) %>%
   mutate(coral_prop = if_else(is.na(c0_sum), 0, c0_sum / (area*multiplier))) %>%
@@ -240,5 +244,5 @@ modeled_sp_tw %>%
             change_cor = sum(cor_vis, na.rm = T))
 
 # let's write it out (full file as a geojson, plus a simpler one as a shapefile for jade)
-st_write(modeled_sp_3, paste0("R2R_Paper/Scenarios/", anum, "_", aname, "/IPMs/MARwide_", ipm, "_", aname, "_rec_", climate, "_sep.geojson"), delete_dsn = TRUE)
-st_write(modeled_sp_tw, paste0("R2R_Paper/Scenarios/", anum, "_", aname, "/IPMs/MARwide_", ipm, "_", aname, "_rec_", climate, "_sep.shp"))#, delete_dsn = TRUE)
+st_write(modeled_sp_3, paste0("R2R_Paper/Scenarios/Re_Analysis_2022_Aug/", anum, "_", aname, "/IPMs/MARwide_", ipm, "_", aname, "_rec_", climate, "_sep.geojson"), delete_dsn = TRUE)
+st_write(modeled_sp_tw, paste0("R2R_Paper/Scenarios/Re_Analysis_2022_Aug/", anum, "_", aname, "/IPMs/MARwide_", ipm, "_", aname, "_rec_", climate, "_sep.shp"))#, delete_dsn = TRUE)
