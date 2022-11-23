@@ -54,7 +54,7 @@ if(anum == "s1_n_r2r"){
 }else if(anum == "s2_w_r2r"){
   newNonClimate <- read_csv("mar_tourism/Data/Scenarios/s2_w_r2r_with_watershed_weighting_NonClimatePredictors_20220105.csv")  
 }else if(anum == "s4a"){
-  newNonClimate <- read_csv("mar_tourism/Data/Scenarios/s4a_local_planning_NonClimatePredictors_20221118.csv")
+  newNonClimate <- read_csv("mar_tourism/Data/Scenarios/s4a_local_planning_NonClimatePredictors_20221123.csv")
 }
 
 
