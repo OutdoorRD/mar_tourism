@@ -48,8 +48,10 @@ PresAbsFunc <- function(predictor, aoi = aoi){
 setwd("~/Documents/MAR")
 
 # specify s1 or s2, or s4a or s4b
-anum <- "s4a"
-aname <- "local_planning"
+# s1_n_r2r = without_watershed_weighting, s2_w_r2r = with_watershed_weighting
+# s4a = local_planning, s4b = regional_planning
+anum <- "s4b"
+aname <- "regional_planning"
 
 # Start by reading in the files
 aoi <- read_sf("ModelRuns/baseline_20200715/T_AOI_v4_5k_32616_pid.shp")

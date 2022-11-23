@@ -42,8 +42,8 @@ aoi <- read_sf("ModelRuns/baseline_20200715/T_AOI_v4_5k_32616_pid.shp")
 ## Getting oriented in naming scheme
 # s1_n_r2r = without_watershed_weighting, s2_w_r2r = with_watershed_weighting
 # s4a = local_planning, s4b = regional_planning
-anum <- "s4a" 
-aname <- "local_planning"
+anum <- "s4b" 
+aname <- "regional_planning"
 climate <- "clim0" #Baseline climate = clim0; 25th perc = clim1; 75th perc = clim2
 climshort <- "c0"
 
@@ -55,6 +55,8 @@ if(anum == "s1_n_r2r"){
   newNonClimate <- read_csv("mar_tourism/Data/Scenarios/s2_w_r2r_with_watershed_weighting_NonClimatePredictors_20220105.csv")  
 }else if(anum == "s4a"){
   newNonClimate <- read_csv("mar_tourism/Data/Scenarios/s4a_local_planning_NonClimatePredictors_20221123.csv")
+}else if(anum == "s4b"){
+  newNonClimate <- read_csv("mar_tourism/Data/Scenarios/s4b_regional_planning_NonClimatePredictors_20221123.csv")
 }
 
 
